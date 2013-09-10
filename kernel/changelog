@@ -1,0 +1,27 @@
+#
+# log for Dooloo os: kernel log
+# signals: #(memo) !(completed bug) ?(question) @(TODO)
+#
+
+# version 0.1 2002/3/5
+
+! idle task's stack overflowed, because interrupt use task stack 
+  change stack size from 0x100 to 0x400
+! 3c509 receive high traffic packet error, because the interval between intr-ack and 
+  event_recv can be interrupted.
+! 3c509 send high traffic packet error, added netbuf into list many times, and tx is not complete
+
+@ use a more efficient task queue, just sort for different proirity tasks.
+@ shell should surpport history commands
+@ add support for RPC
+
+# version 0.13 released 2002/11/3
+! rtl8139 driver receiving ring buffer overflow
+  bear
+! task_schedule()'s calling to i386_switch_to() is not atomic.
+  bear
+! task_delay() and task_wakeup() function: task_delay1() and task_schedule() is not atomic
+  bear
+! msg_send() bug: done wakeup blocked task when queue is full.
+  bear
+

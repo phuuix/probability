@@ -1,0 +1,15 @@
+###################################################
+# new log dooloo vs dietlib 3.3
+###################################################
+
+diff: include/types.h
+diff: include/assert.h
+diff: include/stddef.h
+too much diff: include/stdio.h #no filesystem
+too much diff: include/unistd.h #just a stub
+diff: errno_location.c
+diff: dietstdio.h
+
+###################################################
+# new log dooloo vs dietlib 3.3: end
+###################################################

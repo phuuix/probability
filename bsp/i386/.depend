@@ -1,0 +1,63 @@
+i386_cons.o: i386_cons.c ../../include/bsp.h \
+ ../../libc/include/inttypes.h ../../libc/include/sys/cdefs.h \
+ ../../libc/include/endian.h i386_cons.h i386_hw.h \
+ ../../libc/include/sys/types.h ../../libc/include/stddef.h
+i386_hw.o: i386_hw.c i386_hw.h ../../libc/include/sys/types.h \
+ ../../libc/include/inttypes.h ../../libc/include/sys/cdefs.h \
+ ../../libc/include/endian.h ../../libc/include/stddef.h i386_data.h \
+ i386_sel.h i386_tasksw.h
+i386_stub.o: i386_stub.c config.h ../../libc/include/stdio.h \
+ ../../libc/include/sys/cdefs.h ../../libc/include/sys/types.h \
+ ../../libc/include/inttypes.h ../../libc/include/endian.h \
+ ../../libc/include/stddef.h ../../libc/include/stdarg.h isr.h \
+ ../../include/list.h ../../include/bsp.h i386_stub.h i386_sel.h
+i386_tasksw.o: i386_tasksw.c ../../libc/include/sys/types.h \
+ ../../libc/include/inttypes.h ../../libc/include/sys/cdefs.h \
+ ../../libc/include/endian.h ../../libc/include/stddef.h \
+ ../../include/task.h config.h ../../include/psignal.h \
+ ../../include/list.h ../../include/ptimer.h i386_data.h i386_sel.h \
+ i386_tasksw.h i386_hw.h
+irq.o: irq.c irq.h ../../libc/include/sys/types.h \
+ ../../libc/include/inttypes.h ../../libc/include/sys/cdefs.h \
+ ../../libc/include/endian.h ../../libc/include/stddef.h i386_data.h \
+ i386_hw.h
+isr.o: isr.c isr.h ../../libc/include/sys/types.h \
+ ../../libc/include/inttypes.h ../../libc/include/sys/cdefs.h \
+ ../../libc/include/endian.h ../../libc/include/stddef.h \
+ ../../libc/include/stdio.h ../../libc/include/stdarg.h \
+ ../../include/bsp.h i386_hw.h ../../include/task.h config.h \
+ ../../include/psignal.h ../../include/list.h ../../include/ptimer.h
+keyboard.o: keyboard.c ../../include/bsp.h ../../libc/include/inttypes.h \
+ ../../libc/include/sys/cdefs.h ../../libc/include/endian.h \
+ ../../include/assert.h i386_hw.h ../../libc/include/sys/types.h \
+ ../../libc/include/stddef.h i386_keyboard.h
+kprintf.o: kprintf.c ../../libc/include/stdio.h \
+ ../../libc/include/sys/cdefs.h ../../libc/include/sys/types.h \
+ ../../libc/include/inttypes.h ../../libc/include/endian.h \
+ ../../libc/include/stddef.h ../../libc/include/stdarg.h \
+ ../../libc/include/string.h
+lock.o: lock.c config.h ../../include/bsp.h ../../libc/include/inttypes.h \
+ ../../libc/include/sys/cdefs.h ../../libc/include/endian.h \
+ ../../include/lock.h ../../libc/include/sys/types.h \
+ ../../libc/include/stddef.h
+pci.o: pci.c ../../libc/include/sys/types.h ../../libc/include/inttypes.h \
+ ../../libc/include/sys/cdefs.h ../../libc/include/endian.h \
+ ../../libc/include/stddef.h ../../include/pci.h ../../include/pci_ids.h \
+ ../../libc/include/stdio.h ../../libc/include/stdarg.h \
+ ../../include/memory.h ../../include/bsp.h i386_hw.h
+tty_pc_drv.o: tty_pc_drv.c ../../include/bsp.h \
+ ../../libc/include/inttypes.h ../../libc/include/sys/cdefs.h \
+ ../../libc/include/endian.h ../../include/tty.h \
+ ../../libc/include/sys/types.h ../../libc/include/stddef.h \
+ ../../include/termios.h ../../include/ipc.h ../../include/task.h \
+ config.h ../../include/psignal.h ../../include/list.h \
+ ../../include/ptimer.h ../../include/buffer.h irq.h isr.h i386_cons.h \
+ i386_keyboard.h i386_data.h
+gdb_udp.o: gdb_udp.c config.h ../../libc/include/stdio.h \
+ ../../libc/include/sys/cdefs.h ../../libc/include/sys/types.h \
+ ../../libc/include/inttypes.h ../../libc/include/endian.h \
+ ../../libc/include/stddef.h ../../libc/include/stdarg.h \
+ ../../include/bsp.h ../../include/net/in.h ../../include/net/ip.h \
+ ../../include/net/icmp.h ../../include/net/udp.h \
+ ../../include/net/netintf.h ../../include/net/if_arp.h \
+ ../../include/net/if_ether.h

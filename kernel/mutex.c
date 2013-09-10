@@ -1,0 +1,237 @@
+/*************************************************************************/
+/* The Dooloo kernel                                                     */
+/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
+/* All Rights Reserved.                                                  */
+/*                                                                       */
+/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
+/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
+/*                                                                       */
+/*************************************************************************/
+
+/*************************************************************************
+ *
+ * FILE                                       VERSION
+ *   mutex.c                                   0.3.0
+ *
+ * COMPONENT
+ *   Kernel
+ *
+ * DESCRIPTION
+ *
+ *
+ * CHANGELOG
+ *   AUTHOR         DATE                    NOTES
+ *   Bearix         2006-8-20               Version 0.3.0
+ *   Bearix         2006-8-31               modify API forms according to process adaption
+ *                                                    use IPC api
+ *************************************************************************/ 
+
+#include <config.h>
+
+#include <sys/types.h>
+#include <ipc.h>
+#include <task.h>
+#include <list.h>
+#include <assert.h>
+#include <bsp.h>
+#include <ctype.h>
+
+#include "probability.h"
+
+/*
+ * initialize a mutex
+ *   mtx: mutex
+ *   return: ROK on success, RERROR on failed
+ */
+int mtx_initialize(mtx_t *mtx)
+{
+	if(mtx)
+	{
+		uint32_t f;
+
+		f = bsp_fsave();
+		
+		mtx->value = 1;
+		mtx->holdtimes = 0;
+		mtx->owner = NULL;
+		blockq_init(&mtx->taskq);
+		mtx->flag = IPC_FLAG_VALID;
+		
+		bsp_frestore(f);
+		
+		return ROK;
+	}
+
+	return RERROR;
+}
+
+
+/*
+ * cleanup a mutex
+ *   mtx: mutex
+ */
+void mtx_destroy(mtx_t *mtx)
+{
+	struct dtask *t;
+	uint32_t f;
+
+	if(mtx && (mtx->flag & IPC_FLAG_VALID))
+	{
+		f = bsp_fsave();
+		mtx->flag = 0;
+
+		/* wake up all tasks in semaphore's block task queue */
+		while((t = blockq_select(&mtx->taskq)))
+		{
+			task_wakeup_noschedule(TASK_T(t));
+		}
+		task_schedule();
+		bsp_frestore(f);
+	}
+}
+
+
+/*
+ * mutex take
+ *   m: mutex
+ *   timeout: max wait time
+ *     <0 -- wait forever; 0 -- no wait; >0 -- wait for timeout ticks
+ *   retrun: RERROR on failed, RTIMEOUT on timeout, RAGAIN on busy, RSIGNAL when wakeup by signal, ROK on success.
+ */
+int mtx_pend(mtx_t *m, time_t timeout)
+{
+	uint32_t f;
+	int r;
+
+	if(m && (m->flag & IPC_FLAG_VALID))
+	{
+		f = bsp_fsave();
+		if(m->owner == current)	/* recursive holding */
+		{
+			m->holdtimes ++;
+			r = ROK;
+			goto pend_end;
+		}
+
+		m->value--;
+		if(m->value < 0)
+		{
+			if(timeout == 0)
+			{
+				r = RAGAIN;
+				m->value++;
+			}
+			else
+			{
+				/* To prevent priority inverse, we must rise mtx owner's priority */
+				assert(m->owner);
+				if(current->priority<m->owner->priority)
+					task_setopt(TASK_T(m->owner), TASK_OPTION_PRIORITY, &(current->priority), sizeof(uint8_t));
+
+				current->wakeup_cause = RERROR;
+				if(timeout > 0){
+					assert(current->t_delay.param[0] == TASK_T(current));
+					assert(!(current->flags & TASK_FLAGS_DELAYING));
+					ptimer_start(&sysdelay_queue, &current->t_delay, timeout);
+					current->flags |= TASK_FLAGS_DELAYING;
+				}
+				task_block(&(m->taskq));
+
+				switch ((r = current->wakeup_cause))
+				{
+				case ROK:
+					assert(m->holdtimes == 0);
+					assert(m->owner == NULL);
+					m->holdtimes ++;
+					m->owner = current;
+					break;
+					
+				case RTIMEOUT:
+				case RSIGNAL:
+				default:
+					/* up value if task is wakeup for timeout or signal or destroy*/
+					m->value++;
+
+					/* FIX ME: Should we lower mtx owner's priority? */
+					/* No need for it, this work is done in post operation */
+					break;
+				}
+			}
+		}
+		else
+		{
+			assert(m->holdtimes == 0);
+			assert(m->owner == NULL);
+			m->holdtimes ++;
+			m->owner = current;
+			r = ROK;
+		}
+pend_end:
+		bsp_frestore(f);
+	}
+	else
+		r = RERROR;
+
+	return r;
+}
+
+/*
+ * V operation
+ *   m: mutex
+ *   return: 0 on failed; 1 on success
+ */
+int mtx_post(mtx_t *m)
+{
+	uint32_t f;
+	int r = RERROR;
+	struct dtask *t;
+	
+	if(m && (m->flag & IPC_FLAG_VALID))
+	{
+		r = ROK;
+		f = bsp_fsave();
+		
+		/* only mutex's owner can post */
+		if(m->owner != current)
+		{
+			bsp_frestore(f);
+			return RERROR;
+		}
+		
+		assert(m->holdtimes > 0);
+		m->holdtimes --;
+		if(m->holdtimes == 0)
+		{
+			m->value++;
+			m->owner = NULL;
+
+			/* restore task's priority */
+			if(current->priority != current->pri_origin)
+			{
+				task_setopt(TASK_T(current), TASK_OPTION_PRIORITY, &(current->pri_origin), sizeof(uint8_t));
+			}
+
+			if(m->value <= 0)
+			{
+				/* wakeup task */
+				t = blockq_select(&(m->taskq));
+				if(t)
+				{
+					t->wakeup_cause = ROK;
+					task_wakeup(TASK_T(t));
+				}
+			}
+		}
+		else
+		{
+			/* TODO: update current task's priority? */
+			/* no, assume the hold time is relative short */
+		}
+		
+		bsp_frestore(f);
+	}
+	
+	return r;
+}
+
+

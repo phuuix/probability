@@ -1,0 +1,31 @@
+2013-08-17: New name Probability, New Version 0.40
+ - Journal and Performance counter
+ - Host simulation: abandoned
+ - user level printf
+ - CMSIS
+ - Process ?
+ 
+=======================================================
+Technical notes: host simulation
+=======================================================
+use getcontext(), makecontext(), swapcontext() and signal ALRAM
+to implement a pre-emptive thread libary: seems to be not possible
+see below analysis. so I will abandon the host simulator.
+-------------------------------------------------------
+to call getcontext or makecontext:
+  1) disable signal
+  2) getcontext or makecontext
+  3) enable signal
+-------------------------------------------------------
+to call swapcontext:
+  1) disable signal
+  2) swapcontext  ==> will disable signal in to context...
+  3) enable signal
+-------------------------------------------------------
+to simulate fsave() and fstore()
+  1) disable signal
+  2) do jobs      ==> still has the issue like swapcontext
+  3) enable signal 
+-------------------------------------------------------
+to call getchar() ...
+  1) must handle signal return code

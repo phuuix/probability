@@ -1,0 +1,204 @@
+/*************************************************************************/
+/* The Dooloo kernel                                                     */
+/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
+/* All Rights Reserved.                                                  */
+/*                                                                       */
+/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
+/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
+/*                                                                       */
+/*************************************************************************/
+
+/*************************************************************************
+ *
+ * FILE                                       
+ *   siprintf.c                              
+ *
+ * COMPONENT
+ *   Kernel
+ *
+ * DESCRIPTION
+ *    simple printf utils
+ *
+ * CHANGELOG
+ *   AUTHOR         DATE                    NOTES
+ *   Bearix         2012-12-08              init version
+ *************************************************************************/ 
+ 
+#include "siprintf.h"
+
+#define PAD_RIGHT 1
+#define PAD_ZERO 2
+
+int prints(printdev_t *dev, const char *string, int width, int pad)
+{
+	register int pc = 0, padchar = ' ';
+
+	if (width > 0) {
+		register int len = 0;
+		register const char *ptr;
+		for (ptr = string; *ptr; ++ptr) ++len;
+		if (len >= width) width = 0;
+		else width -= len;
+		if (pad & PAD_ZERO) padchar = '0';
+	}
+	if (!(pad & PAD_RIGHT)) {
+		for ( ; width > 0; --width) {
+			pc += dev->outchar (dev, padchar);
+		}
+	}
+	for ( ; *string ; ++string) {
+		pc += dev->outchar (dev, *string);
+	}
+	for ( ; width > 0; --width) {
+		pc += dev->outchar (dev, padchar);
+	}
+
+	return pc;
+}
+
+/* the following should be enough for 32 bit int */
+#define PRINT_BUF_LEN 12
+
+/* b: base
+ * sg: sign
+ */
+int printi(printdev_t *dev, int i, int b, int sg, int width, int pad, int letbase)
+{
+	char print_buf[PRINT_BUF_LEN];
+	register char *s;
+	register int t, neg = 0, pc = 0;
+	register unsigned int u = i;
+
+	if (i == 0) {
+		print_buf[0] = '0';
+		print_buf[1] = '\0';
+		return prints (dev, print_buf, width, pad);
+	}
+
+	if (sg && b == 10 && i < 0) {
+		neg = 1;
+		u = -i;
+	}
+
+	s = print_buf + PRINT_BUF_LEN-1;
+	*s = '\0';
+
+	while (u) {
+		t = u % b;
+		if( t >= 10 )
+			t += letbase - '0' - 10;
+		*--s = t + '0';
+		u /= b;
+	}
+
+	if (neg) {
+		if( width && (pad & PAD_ZERO) ) {
+			pc += dev->outchar (dev, '-');
+			--width;
+		}
+		else {
+			*--s = '-';
+		}
+	}
+
+	return pc + prints (dev, s, width, pad);
+}
+
+int doiprintf(printdev_t *dev, const char *format, va_list args )
+{
+	register int width, pad;
+	register int pc = 0;
+	char scr[2];
+
+	for (; *format != 0; ++format) {
+		if (*format == '%') {
+			++format;
+			width = pad = 0;
+			if (*format == '\0') break;
+			if (*format == '%') goto out;
+			if (*format == '-') {
+				++format;
+				pad = PAD_RIGHT;
+			}
+			while (*format == '0') {
+				++format;
+				pad |= PAD_ZERO;
+			}
+			for ( ; *format >= '0' && *format <= '9'; ++format) {
+				width *= 10;
+				width += *format - '0';
+			}
+			if( *format == 's' ) {
+				register char *s = (char *)va_arg( args, int );
+				pc += prints (dev, s?s:"(null)", width, pad);
+				continue;
+			}
+			if( *format == 'd' ) {
+				pc += printi (dev, va_arg( args, int ), 10, 1, width, pad, 'a');
+				continue;
+			}
+			if( *format == 'x' ) {
+				pc += printi (dev, va_arg( args, int ), 16, 0, width, pad, 'a');
+				continue;
+			}
+			if( *format == 'X' ) {
+				pc += printi (dev, va_arg( args, int ), 16, 0, width, pad, 'A');
+				continue;
+			}
+			if( *format == 'u' ) {
+				pc += printi (dev, va_arg( args, int ), 10, 0, width, pad, 'a');
+				continue;
+			}
+			if( *format == 'c' ) {
+				/* char are converted to int then pushed on the stack */
+				scr[0] = (char)va_arg( args, int );
+				scr[1] = '\0';
+				pc += prints (dev, scr, width, pad);
+				continue;
+			}
+		}
+		else {
+		out:
+			pc += dev->outchar (dev, *format);
+		}
+	}
+	va_end( args );
+	return pc;
+}
+
+int string_outchar(printdev_t *dev, char c)
+{
+	char *dst;
+	
+	if(dev->offset < dev->limit)
+	{
+		dst = dev->internal;
+		dst[dev->offset++] = c;
+		return 1;
+	}
+	
+	return 0;
+}
+
+int siprintf(char *buf, size_t size, char *fmt, ...)
+{
+	printdev_t sprintdev;
+	va_list parms;
+	int result = 0;
+
+	sprintdev.internal = buf;
+	sprintdev.limit = size-1;
+	sprintdev.offset = 0;
+	sprintdev.outchar = string_outchar;
+	
+	va_start(parms,fmt);
+	result = doiprintf(&sprintdev,fmt,parms);
+	va_end(parms);
+	
+	/* terminate the string */
+	if(result > sprintdev.limit)
+		result = sprintdev.limit;
+	buf[result] = '\0';
+
+	return(result);
+}

@@ -1,0 +1,569 @@
+mem.o: core/mem.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/def.h \
+ include/lwip/mem.h include/lwip/sys.h include/lwip/err.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h include/lwip/stats.h \
+ include/lwip/memp.h include/lwip/memp_std.h
+memp.o: core/memp.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/memp.h \
+ include/lwip/memp_std.h include/lwip/pbuf.h include/lwip/err.h \
+ include/lwip/udp.h include/lwip/netif.h include/ipv4/lwip/ip_addr.h \
+ include/lwip/def.h include/ipv4/lwip/ip.h include/lwip/raw.h \
+ include/lwip/tcp_impl.h include/lwip/tcp.h include/lwip/sys.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h include/lwip/mem.h \
+ include/ipv4/lwip/icmp.h include/ipv4/lwip/igmp.h include/lwip/api.h \
+ include/lwip/netbuf.h include/lwip/api_msg.h include/lwip/tcpip.h \
+ include/lwip/netifapi.h include/lwip/timers.h include/lwip/stats.h \
+ include/netif/etharp.h include/ipv4/lwip/ip_frag.h \
+ include/lwip/snmp_structs.h include/lwip/snmp_msg.h include/lwip/snmp.h \
+ include/lwip/dns.h include/netif/ppp_oe.h
+netif.o: core/netif.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/def.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/netif.h include/lwip/err.h \
+ include/lwip/pbuf.h include/lwip/tcp_impl.h include/lwip/tcp.h \
+ include/lwip/sys.h arch/dooloo/include/arch/sys_arch.h \
+ ../../../include/ipc.h ../../../include/task.h \
+ ../../../bsp/i386/config.h ../../../include/psignal.h \
+ ../../../include/list.h ../../../include/ptimer.h \
+ ../../../include/buffer.h include/lwip/mem.h include/ipv4/lwip/ip.h \
+ include/ipv4/lwip/icmp.h include/lwip/snmp.h include/ipv4/lwip/igmp.h \
+ include/netif/etharp.h include/lwip/stats.h include/lwip/memp.h \
+ include/lwip/memp_std.h
+pbuf.o: core/pbuf.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/stats.h \
+ include/lwip/mem.h include/lwip/memp.h include/lwip/memp_std.h \
+ include/lwip/def.h include/lwip/pbuf.h include/lwip/err.h \
+ include/lwip/sys.h arch/dooloo/include/arch/sys_arch.h \
+ ../../../include/ipc.h ../../../include/task.h \
+ ../../../bsp/i386/config.h ../../../include/psignal.h \
+ ../../../include/list.h ../../../include/ptimer.h \
+ ../../../include/buffer.h arch/dooloo/include/arch/perf.h \
+ include/lwip/tcp_impl.h include/lwip/tcp.h include/ipv4/lwip/ip.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/netif.h \
+ include/ipv4/lwip/icmp.h include/lwip/tcpip.h include/lwip/api_msg.h \
+ include/ipv4/lwip/igmp.h include/lwip/api.h include/lwip/netbuf.h \
+ include/lwip/netifapi.h include/lwip/timers.h
+raw.o: core/raw.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/def.h \
+ include/lwip/memp.h include/lwip/memp_std.h include/ipv4/lwip/ip_addr.h \
+ include/lwip/netif.h include/lwip/err.h include/lwip/pbuf.h \
+ include/lwip/raw.h include/ipv4/lwip/ip.h include/lwip/stats.h \
+ include/lwip/mem.h arch/dooloo/include/arch/perf.h
+stats.o: core/stats.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/def.h \
+ include/lwip/stats.h include/lwip/mem.h include/lwip/memp.h \
+ include/lwip/memp_std.h
+sys.o: core/sys.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/sys.h \
+ include/lwip/err.h arch/dooloo/include/arch/sys_arch.h \
+ ../../../include/ipc.h ../../../include/task.h \
+ ../../../bsp/i386/config.h ../../../include/psignal.h \
+ ../../../include/list.h ../../../include/ptimer.h \
+ ../../../include/buffer.h
+tcp.o: core/tcp.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/def.h \
+ include/lwip/mem.h include/lwip/memp.h include/lwip/memp_std.h \
+ include/lwip/snmp.h include/ipv4/lwip/ip_addr.h include/lwip/tcp.h \
+ include/lwip/sys.h include/lwip/err.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h include/lwip/pbuf.h \
+ include/ipv4/lwip/ip.h include/lwip/netif.h include/ipv4/lwip/icmp.h \
+ include/lwip/tcp_impl.h include/lwip/stats.h
+tcp_in.o: core/tcp_in.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/tcp_impl.h \
+ include/lwip/tcp.h include/lwip/sys.h include/lwip/err.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h include/lwip/mem.h \
+ include/lwip/pbuf.h include/ipv4/lwip/ip.h include/lwip/def.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/netif.h \
+ include/ipv4/lwip/icmp.h include/lwip/memp.h include/lwip/memp_std.h \
+ include/ipv4/lwip/inet_chksum.h include/lwip/stats.h include/lwip/snmp.h \
+ arch/dooloo/include/arch/perf.h
+tcp_out.o: core/tcp_out.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/tcp_impl.h \
+ include/lwip/tcp.h include/lwip/sys.h include/lwip/err.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h include/lwip/mem.h \
+ include/lwip/pbuf.h include/ipv4/lwip/ip.h include/lwip/def.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/netif.h \
+ include/ipv4/lwip/icmp.h include/lwip/memp.h include/lwip/memp_std.h \
+ include/ipv4/lwip/inet_chksum.h include/lwip/stats.h include/lwip/snmp.h
+udp.o: core/udp.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/udp.h \
+ include/lwip/pbuf.h include/lwip/err.h include/lwip/netif.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/def.h include/ipv4/lwip/ip.h \
+ include/lwip/memp.h include/lwip/memp_std.h \
+ include/ipv4/lwip/inet_chksum.h include/ipv4/lwip/icmp.h \
+ include/lwip/stats.h include/lwip/mem.h include/lwip/snmp.h \
+ arch/dooloo/include/arch/perf.h include/lwip/dhcp.h
+dhcp.o: core/dhcp.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+init.o: core/init.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/init.h \
+ include/lwip/stats.h include/lwip/mem.h include/lwip/memp.h \
+ include/lwip/memp_std.h include/lwip/sys.h include/lwip/err.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h include/lwip/pbuf.h \
+ include/lwip/netif.h include/ipv4/lwip/ip_addr.h include/lwip/def.h \
+ include/lwip/sockets.h include/ipv4/lwip/inet.h include/ipv4/lwip/ip.h \
+ include/lwip/raw.h include/lwip/udp.h include/lwip/tcp_impl.h \
+ include/lwip/tcp.h include/ipv4/lwip/icmp.h include/lwip/snmp_msg.h \
+ include/lwip/snmp.h include/lwip/snmp_structs.h \
+ include/ipv4/lwip/autoip.h include/ipv4/lwip/igmp.h include/lwip/dns.h \
+ include/lwip/timers.h include/netif/etharp.h
+timers.o: core/timers.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/timers.h \
+ include/lwip/err.h include/lwip/sys.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h \
+ include/lwip/tcp_impl.h include/lwip/tcp.h include/lwip/mem.h \
+ include/lwip/pbuf.h include/ipv4/lwip/ip.h include/lwip/def.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/netif.h \
+ include/ipv4/lwip/icmp.h include/lwip/memp.h include/lwip/memp_std.h \
+ include/lwip/tcpip.h include/lwip/api_msg.h include/ipv4/lwip/igmp.h \
+ include/lwip/api.h include/lwip/netbuf.h include/lwip/netifapi.h \
+ include/ipv4/lwip/ip_frag.h include/netif/etharp.h include/lwip/dhcp.h \
+ include/ipv4/lwip/autoip.h include/lwip/dns.h
+def.o: core/def.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/def.h
+icmp.o: core/ipv4/icmp.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h \
+ include/ipv4/lwip/icmp.h include/lwip/pbuf.h include/lwip/err.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/def.h include/lwip/netif.h \
+ include/ipv4/lwip/inet_chksum.h include/ipv4/lwip/ip.h \
+ include/lwip/stats.h include/lwip/mem.h include/lwip/memp.h \
+ include/lwip/memp_std.h include/lwip/snmp.h
+ip.o: core/ipv4/ip.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/ipv4/lwip/ip.h \
+ include/lwip/def.h include/lwip/pbuf.h include/lwip/err.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/netif.h include/lwip/mem.h \
+ include/ipv4/lwip/ip_frag.h include/ipv4/lwip/inet_chksum.h \
+ include/ipv4/lwip/icmp.h include/ipv4/lwip/igmp.h include/lwip/raw.h \
+ include/lwip/udp.h include/lwip/tcp_impl.h include/lwip/tcp.h \
+ include/lwip/sys.h arch/dooloo/include/arch/sys_arch.h \
+ ../../../include/ipc.h ../../../include/task.h \
+ ../../../bsp/i386/config.h ../../../include/psignal.h \
+ ../../../include/list.h ../../../include/ptimer.h \
+ ../../../include/buffer.h include/lwip/snmp.h include/lwip/dhcp.h \
+ include/ipv4/lwip/autoip.h include/lwip/stats.h include/lwip/memp.h \
+ include/lwip/memp_std.h arch/dooloo/include/arch/perf.h
+inet.o: core/ipv4/inet.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h \
+ include/ipv4/lwip/inet.h include/lwip/def.h include/ipv4/lwip/ip_addr.h
+ip_addr.o: core/ipv4/ip_addr.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/def.h include/lwip/netif.h \
+ include/lwip/err.h include/lwip/pbuf.h
+inet_chksum.o: core/ipv4/inet_chksum.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h \
+ include/ipv4/lwip/inet_chksum.h include/lwip/pbuf.h include/lwip/err.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/def.h
+ip_frag.o: core/ipv4/ip_frag.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h \
+ include/ipv4/lwip/ip_frag.h include/lwip/err.h include/lwip/pbuf.h \
+ include/lwip/netif.h include/ipv4/lwip/ip_addr.h include/lwip/def.h \
+ include/ipv4/lwip/ip.h include/ipv4/lwip/inet_chksum.h \
+ include/lwip/snmp.h include/lwip/stats.h include/lwip/mem.h \
+ include/lwip/memp.h include/lwip/memp_std.h include/ipv4/lwip/icmp.h
+igmp.o: core/ipv4/igmp.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+asn1_dec.o: core/snmp/asn1_dec.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+asn1_enc.o: core/snmp/asn1_enc.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+mib2.o: core/snmp/mib2.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+mib_structs.o: core/snmp/mib_structs.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+msg_in.o: core/snmp/msg_in.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+msg_out.o: core/snmp/msg_out.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+api_lib.o: api/api_lib.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/api.h \
+ include/lwip/netbuf.h include/lwip/pbuf.h include/lwip/err.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/def.h include/lwip/sys.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h include/lwip/tcpip.h \
+ include/lwip/api_msg.h include/ipv4/lwip/igmp.h include/lwip/netif.h \
+ include/lwip/netifapi.h include/lwip/timers.h include/lwip/memp.h \
+ include/lwip/memp_std.h include/ipv4/lwip/ip.h include/lwip/raw.h \
+ include/lwip/udp.h include/lwip/tcp.h include/lwip/mem.h \
+ include/ipv4/lwip/icmp.h
+api_msg.o: api/api_msg.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/api_msg.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/def.h include/lwip/err.h \
+ include/lwip/sys.h arch/dooloo/include/arch/sys_arch.h \
+ ../../../include/ipc.h ../../../include/task.h \
+ ../../../bsp/i386/config.h ../../../include/psignal.h \
+ ../../../include/list.h ../../../include/ptimer.h \
+ ../../../include/buffer.h include/ipv4/lwip/igmp.h include/lwip/netif.h \
+ include/lwip/pbuf.h include/lwip/api.h include/lwip/netbuf.h \
+ include/ipv4/lwip/ip.h include/lwip/udp.h include/lwip/tcp.h \
+ include/lwip/mem.h include/ipv4/lwip/icmp.h include/lwip/raw.h \
+ include/lwip/memp.h include/lwip/memp_std.h include/lwip/tcpip.h \
+ include/lwip/netifapi.h include/lwip/timers.h include/lwip/dns.h
+tcpip.o: api/tcpip.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/sys.h \
+ include/lwip/err.h arch/dooloo/include/arch/sys_arch.h \
+ ../../../include/ipc.h ../../../include/task.h \
+ ../../../bsp/i386/config.h ../../../include/psignal.h \
+ ../../../include/list.h ../../../include/ptimer.h \
+ ../../../include/buffer.h include/lwip/memp.h include/lwip/memp_std.h \
+ include/lwip/mem.h include/lwip/pbuf.h include/lwip/tcpip.h \
+ include/lwip/api_msg.h include/ipv4/lwip/ip_addr.h include/lwip/def.h \
+ include/ipv4/lwip/igmp.h include/lwip/netif.h include/lwip/api.h \
+ include/lwip/netbuf.h include/lwip/netifapi.h include/lwip/timers.h \
+ include/lwip/init.h include/netif/etharp.h include/ipv4/lwip/ip.h \
+ include/netif/ppp_oe.h
+err.o: api/err.c include/lwip/err.h include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+sockets.o: api/sockets.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/sockets.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/def.h include/ipv4/lwip/inet.h \
+ include/lwip/api.h include/lwip/netbuf.h include/lwip/pbuf.h \
+ include/lwip/err.h include/lwip/sys.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h \
+ include/ipv4/lwip/igmp.h include/lwip/netif.h include/lwip/tcp.h \
+ include/lwip/mem.h include/ipv4/lwip/ip.h include/ipv4/lwip/icmp.h \
+ include/lwip/raw.h include/lwip/udp.h include/lwip/tcpip.h \
+ include/lwip/api_msg.h include/lwip/netifapi.h include/lwip/timers.h
+netbuf.o: api/netbuf.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/netbuf.h \
+ include/lwip/pbuf.h include/lwip/err.h include/ipv4/lwip/ip_addr.h \
+ include/lwip/def.h include/lwip/memp.h include/lwip/memp_std.h
+netdb.o: api/netdb.c include/lwip/netdb.h include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+etharp.o: netif/etharp.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h \
+ include/ipv4/lwip/ip_addr.h include/lwip/def.h include/ipv4/lwip/ip.h \
+ include/lwip/pbuf.h include/lwip/err.h include/lwip/netif.h \
+ include/lwip/stats.h include/lwip/mem.h include/lwip/memp.h \
+ include/lwip/memp_std.h include/lwip/snmp.h include/lwip/dhcp.h \
+ include/ipv4/lwip/autoip.h include/netif/etharp.h
+slipif.o: netif/slipif.c include/netif/slipif.h include/lwip/netif.h \
+ include/lwip/opt.h lwipopts.h include/lwip/debug.h include/lwip/arch.h \
+ arch/dooloo/include/arch/cc.h ../../../libc/include/stdio.h \
+ ../../../libc/include/sys/cdefs.h ../../../libc/include/sys/types.h \
+ ../../../libc/include/inttypes.h ../../../libc/include/endian.h \
+ ../../../libc/include/stddef.h ../../../libc/include/stdarg.h \
+ ../../../libc/include/string.h ../../../include/bsp.h \
+ ../../../include/assert.h include/lwip/err.h include/ipv4/lwip/ip_addr.h \
+ include/lwip/def.h include/lwip/pbuf.h
+auth.o: netif/ppp/auth.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+chap.o: netif/ppp/chap.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+chpms.o: netif/ppp/chpms.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+fsm.o: netif/ppp/fsm.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+ipcp.o: netif/ppp/ipcp.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+lcp.o: netif/ppp/lcp.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+magic.o: netif/ppp/magic.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+md5.o: netif/ppp/md5.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+pap.o: netif/ppp/pap.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+ppp.o: netif/ppp/ppp.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+randm.o: netif/ppp/randm.c include/lwip/opt.h lwipopts.h \
+ include/lwip/debug.h include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+vj.o: netif/ppp/vj.c include/lwip/opt.h lwipopts.h include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h
+sys_arch.o: arch/dooloo/sys_arch.c include/lwip/debug.h \
+ include/lwip/arch.h arch/dooloo/include/arch/cc.h \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h \
+ ../../../libc/include/stdlib.h ../../../libc/include/alloca.h \
+ include/lwip/sys.h include/lwip/opt.h lwipopts.h include/lwip/err.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h include/lwip/stats.h \
+ include/lwip/mem.h include/lwip/memp.h include/lwip/memp_std.h
+sys_arch_init.o: arch/dooloo/sys_arch_init.c \
+ ../../../libc/include/stdio.h ../../../libc/include/sys/cdefs.h \
+ ../../../libc/include/sys/types.h ../../../libc/include/inttypes.h \
+ ../../../libc/include/endian.h ../../../libc/include/stddef.h \
+ ../../../libc/include/stdarg.h include/lwip/debug.h include/lwip/arch.h \
+ arch/dooloo/include/arch/cc.h ../../../libc/include/string.h \
+ ../../../include/bsp.h ../../../include/assert.h include/lwip/mem.h \
+ include/lwip/opt.h lwipopts.h include/lwip/memp.h \
+ include/lwip/memp_std.h include/lwip/sys.h include/lwip/err.h \
+ arch/dooloo/include/arch/sys_arch.h ../../../include/ipc.h \
+ ../../../include/task.h ../../../bsp/i386/config.h \
+ ../../../include/psignal.h ../../../include/list.h \
+ ../../../include/ptimer.h ../../../include/buffer.h include/lwip/stats.h \
+ include/lwip/tcpip.h include/lwip/api_msg.h include/ipv4/lwip/ip_addr.h \
+ include/lwip/def.h include/ipv4/lwip/igmp.h include/lwip/netif.h \
+ include/lwip/pbuf.h include/lwip/api.h include/lwip/netbuf.h \
+ include/lwip/netifapi.h include/lwip/timers.h include/netif/etharp.h \
+ include/ipv4/lwip/ip.h ../../../include/net/netintf.h \
+ ../../../include/shell.h
