@@ -1,31 +1,23 @@
-/*************************************************************************/
-/* The Dooloo kernel                                                     */
-/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
-/* All Rights Reserved.                                                  */
-/*                                                                       */
-/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
-/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
-/*                                                                       */
-/*************************************************************************/
-
-/*************************************************************************
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * FILE                                       VERSION
- *   mbox.c                                    0.3.0
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  *
- * COMPONENT
- *   Kernel
- *
- * DESCRIPTION
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
  *   Mail box is a variance of message queue, every message's size is 4
  *   long words.
  *
- * CHANGELOG
- *   AUTHOR         DATE                    NOTES
- *   Bearix         2006-8-20               Version 0.3.0
- *   Bearix         2013-1-28               Port to ARM Cortex-m, avoid unnessesary disable 
+ * @History
+ *   AUTHOR         DATE                 NOTES
+ *   puhuix          2013-1-28              Port to ARM Cortex-m, avoid unnessesary disable 
  *                                                    interrupt to adapt pendsv task switch
- *************************************************************************/ 
+ */
 
 #include <config.h>
 
@@ -51,25 +43,38 @@ int mbox_initialize(mbox_t *mbox, uint16_t usize, uint16_t unum, void *data)
 {
 	uint32_t f;
 
+	assert(unum > 0);
+	assert(usize > 0);
+	
 	if(mbox == NULL)
 		return RERROR;
 
+	mbox->flag = 0;
+	
 	if(data == NULL)
 	{
-		/* TODO: set a flag to free data */
+		/* set a flag to free data */
+		mbox->flag |= IPC_FLAG_FREEMEM;
 		data = malloc(usize*unum*sizeof(uint32_t));
 	}
 	
 	if(data == NULL)
 		return RERROR;
 
-	f = bsp_fsave();
-	
 	mbox->type = IPC_TYPE_MBOX;
-	mbox->flag = IPC_FLAG_VALID;
 	blockq_init(&mbox->taskq);
 	queue_buffer_init(&mbox->buf, data, usize, unum);
 	
+	f = bsp_fsave();
+	mbox->flag |= IPC_FLAG_VALID;
+	
+#ifdef INCLUDE_JOURNAL
+	journal_ipc_init((ipc_t *)mbox);
+#endif
+
+#ifdef INCLUDE_PMCOUNTER
+	PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nMbox], 1);
+#endif
 	bsp_frestore(f);
 
 	return ROK;
@@ -88,6 +93,18 @@ void mbox_destroy(mbox_t *mbox)
 	if(mbox && (mbox->flag & IPC_FLAG_VALID))
 	{
 		f = bsp_fsave();
+
+		if(mbox->flag & IPC_FLAG_FREEMEM)
+			free(mbox->buf.data);
+		
+#ifdef INCLUDE_JOURNAL
+		journal_ipc_destroy((ipc_t *)mbox);
+#endif
+		
+#ifdef INCLUDE_PMCOUNTER
+		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nMbox], -1);
+#endif
+
 		mbox->flag = 0;
 
 		/* wake up all tasks in mbox's block task queue */
@@ -124,7 +141,9 @@ int mbox_post(mbox_t *mbox, uint32_t *msg)
 			t = blockq_select(&(mbox->taskq));
 			if(t)
 			{
+#ifdef INCLUDE_JOURNAL
 				journal_ipc_post((ipc_t *)mbox, TASK_T(t));
+#endif // INCLUDE_JOURNAL
 				t->wakeup_cause = ROK;
 				task_wakeup(t-systask);
 			}
@@ -173,7 +192,9 @@ int mbox_pend(mbox_t *mbox, uint32_t *msg, int timeout)
 					current->flags |= TASK_FLAGS_DELAYING;
 				}
 
+#ifdef INCLUDE_JOURNAL
 				journal_ipc_pend((ipc_t *)mbox, TASK_T(current));
+#endif // INCLUDE_JOURNAL
 				task_block(&(mbox->taskq));
 				bsp_frestore(f);
 

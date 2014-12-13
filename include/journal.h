@@ -1,6 +1,21 @@
-/* journal.h 
- * Journal and PMC (performance counter)
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ *
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
+ *   Journal and PMC (performance counter)
+ *
+ * @History
+ *   AUTHOR         DATE           NOTES
  */
+
 #ifndef _JOURNAL_H_
 #define _JOURNAL_H_
 
@@ -26,6 +41,9 @@ struct journal_taskswitch
 {
 	uint32_t time;
 	uint8_t jtype;
+	uint8_t tfrom_state;
+	uint8_t tfrom_flags;
+	uint8_t tto_wakeup_cause;
 	uint16_t t_from;
 	uint16_t t_to;
 };
@@ -49,6 +67,8 @@ struct journal_tasklife
 {
 	uint32_t time;
 	uint8_t jtype;
+	uint8_t flags;
+	uint16_t filler;
 	uint16_t tid;
 	uint16_t t_parent;
 };
@@ -79,18 +99,22 @@ void journal_task_create(struct dtask *task);
 void journal_task_exit(struct dtask *task);
 void journal_ipc_init(ipc_t *ipc);
 void journal_ipc_destroy(ipc_t *ipc);
+void journal_dump();
 
 /**********************************************************************
  * Performance counters
  * 
  **********************************************************************/
-#ifdef PMCounter
-#define PMC_PEG_SYS32_COUNTER(counter, value) \
+#ifdef INCLUDE_PMCOUNTER
+#define PMC_PEG_COUNTER(counter, value) \
 	do{ \
-		PMC_sys32_counter[counter] += value; \
+		(counter) += (value); \
 	}while(0)
-#else
-#define PMC_PEG_SYS32_COUNTER(counter, value)
+
+#define PMC_SET_COUNTER(counter, value) \
+		do{ \
+			(counter) = (value); \
+		}while(0)
 #endif
 
 /* system level counters */
@@ -105,6 +129,7 @@ enum
 	PMC_U32_nMessageQ,
 	PMC_U32_nUprint,
 	PMC_U32_nUprintOverwriten,
+	PMC_U32_nInterruptInCurrentTick,// number ot interrupt in current ick
 	PMC_U32_nInterruptInLastTick,	// number of interrupt in last tick
 	PMC_U32_nsMaxJitterTick,		// max jitter in ns between one tick
 	PMC_U32_nsAvgJitterTick,		// average jitter in ns between one tick
@@ -156,14 +181,18 @@ enum{
 /* task level counters */
 enum{
 	PMC_U32_Task_nsConsumedInLastSecond,
-	PMC_U32_Task_nBytesOccupied,
+	PMC_U32_Task_nBytesOccupied,          // memory statistics
 	PMC_U32_Task_nTaskSwitch,
+	PMC_U32_Task_nMax
 };
 
 /* ipc level counters */
 
 
 extern uint32_t PMC_sys32_counter[PMC_U32_nSysmax];
+
+void pmc_calc_cpu_usage();
+void pmc_dump();
 
 #endif /* _JOURNAL_H_ */
 

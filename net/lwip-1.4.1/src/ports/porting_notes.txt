@@ -1,0 +1,17 @@
+netif的几个成员函数：
+
+input(): 由netif_add()传入。如设置为tcpip_input(), 发消息给tcpip_thread。
+output(): etharp_output()
+linkoutput(): low_level_output()
+status_callback(): can be NULL
+link_callback(): can be NULL
+
+eth中断处理: post sem, invoke task ethernetif_input, low_level_input, netif->input()
+
+LWIP中的thread: 
+	tcpip_thread -- main task
+	ethernetif_input -- rx from hardware. it is replaced by net_task in Probability.
+	LwIP_DHCP_task -- only live at beginning
+
+define NO_SYS as 0, and all timer is handled in tcpip_thread. ==> really good:)
+but the func sys_timeout() isn't protected by any lock, this could cause issue...

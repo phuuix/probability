@@ -8,6 +8,8 @@
 #include "bsp.h"
 #include "cli.h"
 #include "memory.h"
+#include "uprintf.h"
+#include "journal.h"
 
 /* all commands:
  * i: show tasks
@@ -29,8 +31,8 @@ int cmd_help(struct shell_session *ss, int argc, char **argv)
 	ss->output("i:                 show tasks\n");
 	ss->output("d <addr> [size]:   display memory\n");
 	ss->output("m <addr> <value>:  modify memroy\n");
-	ss->output("t:                 set trace level\n");
-	ss->output("s <m>:             show \n");
+	ss->output("t <block> <value>: set trace level\n");
+	ss->output("s m|j|c:           show memory, journal, counter\n");
 
 	return 0;
 }
@@ -118,27 +120,65 @@ int cmd_modify_mem(struct shell_session *ss, int argc, char **argv)
 
 int cmd_show(struct shell_session *ss, int argc, char **argv)
 {
+	uint32_t f;
 	if(argc < 2)
 		return 0;
 
-	if(argv[1][0] == 'm')
-		memory_dump();
-	else
-		ss->output(" unknow argument: %s\n", argv[1]);
+	switch (argv[1][0])
+	{
+		case 'm':
+			memory_dump();
+			break;
+		case 'j':
+#ifdef INCLUDE_JOURNAL
+			f = bsp_fsave();
+			journal_dump();
+			bsp_frestore(f);
+#endif
+			break;
+		case 'c':
+#ifdef INCLUDE_PMCOUNTER
+			f = bsp_fsave();
+			pmc_dump();
+			bsp_frestore(f);
+#endif
+			break;
+		default:
+			ss->output(" unknow argument: %s\n", argv[1]);
+	}
 
 	return 0;
 }
 
-
-
-
-extern uint32_t g_trace_flags;
 int cmd_toggle_trace(struct shell_session *ss, int argc, char **argv)
 {
-	if(argc < 2)
-		g_trace_flags = ~g_trace_flags;
-	else
-		g_trace_flags = strtol(argv[1], NULL, 16);
+	uint8_t blockId;
+	uint8_t bitmap;
+	uint16_t level;
+	
+	if(argc < 3)
+		return 0;
+	
+	blockId = (uint8_t)strtol(argv[1], NULL, 10);
+	bitmap = (uint8_t)strtol(argv[2], NULL, 10);
+
+	if(blockId >= UPRINT_MAX_BLOCK)
+	{
+		ss->output("invalid blockId: %d\n", blockId);
+		return 0;
+	}
+
+	for(level=0; level<UPRINT_MLEVEL; level++)
+	{
+		if(bitmap & (1<<level))
+		{
+			uprintf_set_enable(level, blockId, 1);
+			ss->output("block %d level %d enabled %d\n", blockId, level, uprintf_enabled(level, blockId));
+		}
+		else
+			uprintf_set_enable(level, blockId, 0);
+	}
+	
 	return 0;
 }
 
@@ -217,7 +257,7 @@ int cmd_process(char *cmd)
 	
 	if(strlen(argv[0]) != 1)
 	{
-		kprintf("unknown command: %s\n", argv[0]);
+		uprintf(UPRINT_WARNING, UPRINT_BLK_CLI, "unknown command: %s\n", argv[0]);
 		return 0;
 	}
 	
@@ -262,7 +302,7 @@ int cmd_process(char *cmd)
 		}
 		
 		default:
-			kprintf("unknown command: %s\n", argv[0]);
+			uprintf(UPRINT_WARNING, UPRINT_BLK_CLI, "Unknown command: %s\n", argv[0]);
 			break;
 	}
 	

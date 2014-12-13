@@ -1,33 +1,25 @@
-/*************************************************************************/
-/* The Dooloo kernel                                                     */
-/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
-/* All Rights Reserved.                                                  */
-/*                                                                       */
-/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
-/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
-/*                                                                       */
-/*************************************************************************/
-
-/*************************************************************************
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * FILE                                       VERSION
- *   slab.c                                    0.3.0
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  *
- * COMPONENT
- *   Kernel
- *
- * DESCRIPTION
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
  *   A realization of slab allocator
  *
- * CHANGELOG
- *   AUTHOR         DATE                    NOTES
- *   Bearix         2006-8-20               Version 0.3.0
- *   Bearix         2006-8-21               introduce create and allocate flags,
+ * @History
+ *   AUTHOR         DATE                 NOTES
+ *   puhuix           2006-8-21             introduce create and allocate flags,
  *                                                    remove the need of static allocator,
  *                                                    use align to minimal footprint
  *                                                    reduce the size of kmem_bufctl,
  *                                                    introduce kmalloc/kfree.
- *************************************************************************/ 
+ */
 
 
 /* ***************************************************************************

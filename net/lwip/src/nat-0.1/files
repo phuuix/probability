@@ -1,4 +1,0 @@
-nat.c         - A IP Network Address translator.	   
-natopts.h     - NAT configuration file.
-nat_memp.c    - A lwIP memory handler implemented for NAT. Could be merged with
-                the lwIPs memp.c to save code space.

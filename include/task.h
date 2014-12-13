@@ -1,29 +1,20 @@
-/*************************************************************************/
-/* The Dooloo kernel                                                     */
-/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
-/* All Rights Reserved.                                                  */
-/*                                                                       */
-/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
-/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
-/*                                                                       */
-/*************************************************************************/
-
-/*************************************************************************/
-/*                                                                       */
-/* FILE                                       VERSION                    */
-/*   task.h                                    0.3.0                     */
-/*                                                                       */
-/* COMPONENT                                                             */
-/*   Kernel                                                              */
-/*                                                                       */
-/* DESCRIPTION                                                           */
-/*   task header file                                                    */
-/*                                                                       */
-/* CHANGELOG                                                             */
-/*   AUTHOR         DATE                    NOTES                        */
-/*   Bearix         2006-8-20               Version 0.3.0                */
-/*************************************************************************/ 
-
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ *
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
+ *   task header file
+ *
+ * @History
+ *   AUTHOR         DATE           NOTES
+ */
 
 #ifndef __D_TASK_H__
 #define __D_TASK_H__
@@ -120,6 +111,15 @@ struct dtask
 	void *context;						/* task's process context, used as extension for later*/
 
 	ptimer_t t_delay;
+
+#ifdef INCLUDE_PMCOUNTER
+#define PMC_TASK32_NMAX 4
+	uint32_t time_in_sec;				/* the time when task is switched in */
+	uint32_t time_in_ns;
+	uint32_t time_accumulate_c_ns;		/* ns spent in current second (time_accumulate_c_sec) */
+
+	uint32_t PMC_task32[PMC_TASK32_NMAX];  /* PM counter */
+#endif
 };
 typedef struct dtask dtask_t;
 
@@ -174,7 +174,7 @@ void task_unlock();
 
 void task_set_schedule_hook(void (*hook)(struct dtask *, struct dtask *));
 
-void sys_interrupt_enter();
-void sys_interrupt_exit();
+void sys_interrupt_enter(uint32_t irq);
+void sys_interrupt_exit(uint32_t irq);
 #endif /* __D_TASK_H__ */
 

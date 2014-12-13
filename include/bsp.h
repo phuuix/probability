@@ -1,28 +1,20 @@
-/*************************************************************************/
-/* The Dooloo kernel                                                     */
-/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
-/* All Rights Reserved.                                                  */
-/*                                                                       */
-/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
-/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
-/*                                                                       */
-/*************************************************************************/
-
-/*************************************************************************/
-/*                                                                       */
-/* FILE                                       VERSION                    */
-/*   bsp.h                                     0.3.0                     */
-/*                                                                       */
-/* COMPONENT                                                             */
-/*   Kernel                                                              */
-/*                                                                       */
-/* DESCRIPTION                                                           */
-/*   This header file is BSP's interface to Dooloo                       */
-/*                                                                       */
-/* CHANGELOG                                                             */
-/*   AUTHOR         DATE                    NOTES                        */
-/*   Bearix         2006-8-20               Version 0.3.0                */
-/*************************************************************************/ 
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ *
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
+ *   This header file is BSP's interface to os kernel .
+ *
+ * @History
+ *   AUTHOR         DATE           NOTES
+ */
 
 #ifndef __D_BSP_H__
 #define __D_BSP_H__
@@ -81,6 +73,7 @@ void bsp_task_switch_interrupt(uint32_t from, uint32_t to);
 char *bsp_task_init(int index, void (*task)(void *p), void *parm, char *stack, void (*killer)(void));
 
 /* libc interface */
+void bsp_gettime(uint32_t *tv_sec, uint32_t *tv_nsec);
 
 /* GDB remote debug stub interface */
 void breakpoint();

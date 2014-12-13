@@ -1,30 +1,22 @@
-/*************************************************************************/
-/* The Dooloo kernel                                                     */
-/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
-/* All Rights Reserved.                                                  */
-/*                                                                       */
-/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
-/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
-/*                                                                       */
-/*************************************************************************/
-
-/*************************************************************************
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * FILE                                       VERSION
- *   mutex.c                                   0.3.0
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  *
- * COMPONENT
- *   Kernel
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
+ *   mutex implementation
  *
- * DESCRIPTION
- *
- *
- * CHANGELOG
- *   AUTHOR         DATE                    NOTES
- *   Bearix         2006-8-20               Version 0.3.0
- *   Bearix         2006-8-31               modify API forms according to process adaption
+ * @History
+ *   AUTHOR         DATE                 NOTES
+ *   puhuix           2006-8-31             modify API forms according to process adaption
  *                                                    use IPC api
- *************************************************************************/ 
+ */
 
 #include <config.h>
 
@@ -36,6 +28,7 @@
 #include <bsp.h>
 #include <ctype.h>
 
+#include "journal.h"
 #include "probability.h"
 
 /*
@@ -56,7 +49,15 @@ int mtx_initialize(mtx_t *mtx)
 		mtx->owner = NULL;
 		blockq_init(&mtx->taskq);
 		mtx->flag = IPC_FLAG_VALID;
+
+#ifdef INCLUDE_JOURNAL
+		journal_ipc_init((ipc_t *)mtx);
+#endif
 		
+#ifdef INCLUDE_PMCOUNTER
+		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nMutex], 1);
+#endif
+
 		bsp_frestore(f);
 		
 		return ROK;
@@ -78,6 +79,15 @@ void mtx_destroy(mtx_t *mtx)
 	if(mtx && (mtx->flag & IPC_FLAG_VALID))
 	{
 		f = bsp_fsave();
+
+#ifdef INCLUDE_JOURNAL
+		journal_ipc_destroy((ipc_t *)mtx);
+#endif
+				
+#ifdef INCLUDE_PMCOUNTER
+		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nMutex], -1);
+#endif
+
 		mtx->flag = 0;
 
 		/* wake up all tasks in semaphore's block task queue */
@@ -101,7 +111,7 @@ void mtx_destroy(mtx_t *mtx)
 int mtx_pend(mtx_t *m, time_t timeout)
 {
 	uint32_t f;
-	int r;
+	int r = RERROR;
 
 	if(m && (m->flag & IPC_FLAG_VALID))
 	{
@@ -110,7 +120,8 @@ int mtx_pend(mtx_t *m, time_t timeout)
 		{
 			m->holdtimes ++;
 			r = ROK;
-			goto pend_end;
+			bsp_frestore(f);
+			return r;
 		}
 
 		m->value--;
@@ -120,6 +131,7 @@ int mtx_pend(mtx_t *m, time_t timeout)
 			{
 				r = RAGAIN;
 				m->value++;
+				bsp_frestore(f);
 			}
 			else
 			{
@@ -136,7 +148,10 @@ int mtx_pend(mtx_t *m, time_t timeout)
 					current->flags |= TASK_FLAGS_DELAYING;
 				}
 				task_block(&(m->taskq));
+				bsp_frestore(f);
 
+				r = RERROR;
+				f = bsp_fsave();
 				switch ((r = current->wakeup_cause))
 				{
 				case ROK:
@@ -156,6 +171,7 @@ int mtx_pend(mtx_t *m, time_t timeout)
 					/* No need for it, this work is done in post operation */
 					break;
 				}
+				bsp_frestore(f);
 			}
 		}
 		else
@@ -165,12 +181,9 @@ int mtx_pend(mtx_t *m, time_t timeout)
 			m->holdtimes ++;
 			m->owner = current;
 			r = ROK;
+			bsp_frestore(f);
 		}
-pend_end:
-		bsp_frestore(f);
 	}
-	else
-		r = RERROR;
 
 	return r;
 }

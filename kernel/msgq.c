@@ -1,29 +1,21 @@
-/*************************************************************************/
-/* The Dooloo kernel                                                     */
-/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
-/* All Rights Reserved.                                                  */
-/*                                                                       */
-/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
-/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
-/*                                                                       */
-/*************************************************************************/
-
-/*************************************************************************
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * FILE                                       VERSION
- *   msgq.c                                    0.3.0
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  *
- * COMPONENT
- *   Kernel
- *
- * DESCRIPTION
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
  *   message queue implement
  *
- * CHANGELOG
- *   AUTHOR         DATE                    NOTES
- *   Bearix         2006-8-20               Version 0.3.0
- *************************************************************************/ 
-
+ * @History
+ *   AUTHOR         DATE                 NOTES
+ *   
+ */
 
 #include <config.h>
 
@@ -34,6 +26,8 @@
 #include <bsp.h>
 #include <ctype.h>
 #include <stdlib.h>
+
+#include "journal.h"
 #include "probability.h"
 
 
@@ -66,6 +60,14 @@ int msgq_initialize(msgq_t *q, uint16_t bufsize, void *buf)
 	blockq_init(&q->taskq);
 	mem_buffer_init(&q->buf, buf, bufsize);
 
+#ifdef INCLUDE_JOURNAL
+	journal_ipc_init((ipc_t *)q);
+#endif
+			
+#ifdef INCLUDE_PMCOUNTER
+	PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nMessageQ], 1);
+#endif
+
 	bsp_frestore(f);
 	
 	return ROK;
@@ -84,6 +86,15 @@ void msgq_destroy(msgq_t *q)
 	if(q && (q->flag & IPC_FLAG_VALID))
 	{
 		f = bsp_fsave();
+
+#ifdef INCLUDE_JOURNAL
+		journal_ipc_destroy((ipc_t *)q);
+#endif
+				
+#ifdef INCLUDE_PMCOUNTER
+		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nMessageQ], -1);
+#endif
+
 		q->flag = 0;
 
 		/* wake up all tasks in msgq's block task queue */
@@ -147,16 +158,19 @@ int msgq_pend(msgq_t *msgq, char *msg, size_t *msglen, int timeout)
 
 	if(msgq && (msgq->flag & IPC_FLAG_VALID))
 	{
-		ret = ROK;
 		f = bsp_fsave();
 		len = mem_buffer_get(&msgq->buf, msg, *msglen);
+		bsp_frestore(f);
 
 		if(len == 0)
 		{
 			if(timeout == 0)
+			{
 				ret = RAGAIN;
+			}
 			else
 			{
+				f = bsp_fsave();
 				current->wakeup_cause = RERROR;
 				if(timeout > 0)
 				{
@@ -166,7 +180,10 @@ int msgq_pend(msgq_t *msgq, char *msg, size_t *msglen, int timeout)
 					current->flags |= TASK_FLAGS_DELAYING;
 				}
 				task_block(&(msgq->taskq));
+				bsp_frestore(f);
 
+				ret = RERROR;
+				f = bsp_fsave();
 				switch ((ret = current->wakeup_cause))
 				{
 				case ROK:
@@ -180,9 +197,13 @@ int msgq_pend(msgq_t *msgq, char *msg, size_t *msglen, int timeout)
 				default:
 					break;
 				}
+				bsp_frestore(f);
 			}
 		}
-		bsp_frestore(f);
+		else
+		{
+			ret = ROK;
+		}
 		
 		*msglen = len;
 	}

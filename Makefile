@@ -1,11 +1,11 @@
 # Top level Makefile
 # Usually you should invoke like this way: make BSP=i386, etc
 
-ifeq ($(BSP),)
-BSP = i386
-endif
+PROJ_ROOTDIR = .
 
-SUBDIRS = libc kernel tty bsp/$(BSP)
+include $(PROJ_ROOTDIR)/config.mk
+
+SUBDIRS = libc kernel tty net bsp/$(BSP)
 
 all:
 	for tdir in $(SUBDIRS) ; do make -C $$tdir all ; done

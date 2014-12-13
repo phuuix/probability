@@ -14,13 +14,16 @@
 #include <stdlib.h>
 
 #include "ipc.h"
+#ifdef WITHSAMV         // to work with others, you need change this file
 #include "samv_agent.h"
+#endif
 #include "usbd_conf.h"
 #include "usbd_stb_core.h"
 #include "usbd_desc.h"
 #include "usbd_req.h"
 
 #define USB_MDATASIZE 64
+
 /*********************************************
    STB Device library callbacks
  *********************************************/
@@ -356,6 +359,7 @@ static uint8_t  usbd_stb_DataOut (void *pdev, uint8_t epnum)
   assert(USB_Rx_Cnt < USB_MDATASIZE);
   assert(usbd_data);
   
+#if WITHSAMV  
   //KPRINTF("usbd_stb_DataOut: core_id=%d buf=0x%x len=%d\n", 
   //		usbd_data->core_id, usbd_data->USB_Rx_Buffer, USB_Rx_Cnt);
   //dump_buffer(usbd_data->USB_Rx_Buffer, USB_Rx_Cnt);
@@ -374,7 +378,8 @@ static uint8_t  usbd_stb_DataOut (void *pdev, uint8_t epnum)
     if(USB_Rx_Cnt==0 || mbox_post(&samv_mbox, (uint32_t *)&mail) != ROK)
       free(mail.bufptr);
   }
-  
+#endif
+
   /* Prepare Out endpoint to receive next packet */
   DCD_EP_PrepareRx(pdev,
                    STB_OUT_EP,

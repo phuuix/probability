@@ -1,31 +1,21 @@
-/*************************************************************************/
-/* The Dooloo kernel                                                     */
-/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
-/* All Rights Reserved.                                                  */
-/*                                                                       */
-/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
-/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
-/*                                                                       */
-/*************************************************************************/
-
-/*************************************************************************/
-/*                                                                       */
-/* FILE                                       VERSION                    */
-/*   memory.c                                  0.3.0                     */
-/*                                                                       */
-/* COMPONENT                                                             */
-/*   Kernel                                                              */
-/*                                                                       */
-/* DESCRIPTION                                                           */
-/*   This file defines malloc() and free() api                           */
-/*                                                                       */
-/* CHANGELOG                                                             */
-/*   AUTHOR         DATE                    NOTES                        */
-/*   Bearix         2006-8-20               Version 0.3.0                */
-/*   Bearix         2006-8-28               use flags,                      */
-/*                                                    rename malloc/free to kmalloc/kfree */
-/*************************************************************************/ 
-
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ *
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
+ *   This file defines malloc() and free() api
+ *
+ * @History
+ *   AUTHOR         DATE                 NOTES
+ *   Bearix         2006-8-28               use flags, rename malloc/free to kmalloc/kfree
+ */
 
 #include <config.h>
 
@@ -40,6 +30,7 @@
 #include <assert.h>
 #include <bsp.h>
 #include <journal.h>
+#include "uprintf.h"
 #include "probability.h"
 
 #if MEMORY_ADVANCE
@@ -193,27 +184,15 @@ static uint8_t mem_block_sizebig[MEMORY_SIZEBIG_N][MEMORY_SIZEBIG];
 extern S_CACHE s_cache_array[];
 void memory_dump()
 {
-	uint16_t i, j;
+	uint16_t i;
 	S_CACHE *sc;
-	uint8_t *addr;
 	
-	/* dump daily */
-	kprintf("memory info: \n");
-
 	/* dump free memory */
 	for(i=0; i<4; i++)
 	{
 		sc = &s_cache_array[i];
-		kprintf("%s: free objs %d, base 0x%x, free list 0x%x, all objs:\n", 
-				sc->name, sc->free_objs, sc->obj_base, sc->free_obj_list);
-		addr=(uint8_t *)sc->obj_base;
-		for(j=0; j<sc->obj_tnum; j++, addr+=sc->obj_size)
-		{
-			kprintf("%08x ", *(uint32_t *)addr);
-			if(((j+1)&0x7) == 0)
-				kprintf("\n");
-		}
-		kprintf("\n");
+		uprintf(UPRINT_INFO, UPRINT_BLK_MEM, "%s: free %d/%d, base 0x%x, objsize %d\n", 
+				sc->name, sc->free_objs, sc->obj_tnum, sc->obj_base, sc->obj_size);
 	}
 }
 
@@ -232,6 +211,8 @@ void memory_initb()
 	s_cache_create("MEMS768", (S_OBJ *)&mem_block_size768[0], MEMORY_SIZE768, MEMORY_SIZE768_N);
 	/* index 3 */
 	s_cache_create("MEMSBIG", (S_OBJ *)&mem_block_sizebig[0], MEMORY_SIZEBIG, MEMORY_SIZEBIG_N);
+
+	//uprintf_set_enable(UPRINT_INFO, UPRINT_BLK_MEM, 1);
 }
 
 void *malloc(size_t size)
@@ -248,9 +229,11 @@ void *malloc(size_t size)
 		obj = s_cache_alloc(3);
 
 	if(obj == NULL)
-		kprintf("error: out of memory for size: %\n", size);
+		kprintf("error: out of memory task=%s size=%d\n", current->name, size);
 	else{
+#ifdef INCLUDE_JOURNAL
 		journal_memory_alloc(size, obj, NULL, 0, TASK_T(current));
+#endif // INCLUDE_JOURNAL
 	}
 
 	return obj;
@@ -297,10 +280,12 @@ void free(void *p)
 	if(found>=0)
 	{
 		s_cache_free(found, p);
+#ifdef INCLUDE_JOURNAL
 		journal_memory_free(size, p, NULL, 0, TASK_T(current));
+#endif // INCLUDE_JOURNAL
 	}
 	else
-		kprintf("error: invalid pointer for free: %p\n", p);
+		kprintf("error: invalid pointer for free: addr=%p task=%s\n", p, current->name);
 }
 
 #endif /* MEMORY_ADVANCE */

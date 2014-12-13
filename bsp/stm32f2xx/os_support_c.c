@@ -6,14 +6,16 @@
 #include <config.h>
 #include <task.h>
 #include <memory.h>
+#include <clock.h>
 
 #include "stm32f2xx.h"
 #include "core_cm3.h"
 #include "stm32f2xx_rcc.h"
+#include "stm32f2xx_tim.h"
 #include "siprintf.h"
 #include "uart.h"
 
-#define MAX_HANDLERS	64
+#define MAX_HANDLERS	100
 
 /* the two variables are used in bsp_task_switch_interrupt() function */
 uint32_t interrupt_from_task, interrupt_to_task;
@@ -23,6 +25,7 @@ static uint32_t isr_table[MAX_HANDLERS];
 static void dummy_isr_fun(int i);
 extern char _irq_stack_start[];
 extern struct dtask systask[];
+extern uint32_t sys_time_calibration;
 
 void dump_buffer(uint8_t *buffer, uint16_t length)
 {
@@ -31,12 +34,23 @@ void dump_buffer(uint8_t *buffer, uint16_t length)
 	for(i=0; i<length; i++)
 	{
 		kprintf("%02x ", buffer[i]);
-		if((i+1)%16 == 0)
+		if(((i+1)&(16-1)) == 0)
 			kprintf("\n");
-		else if((i+1)%8 == 0)
+		else if(((i+1)&(8-1)) == 0)
 			kprintf("-- ");
 	}
 	kprintf("\n");
+}
+
+void bsp_gettime(uint32_t *tv_sec, uint32_t *tv_nsec)
+{
+	uint32_t ns;
+
+	*tv_sec = time(NULL);
+	/* TIM_GetCounter() return us */
+	ns = TIM_GetCounter(TIM2)*1000;
+	//*tv_nsec = ns;
+	*tv_nsec = (ns >= sys_time_calibration)? (ns-sys_time_calibration):(1000000000-sys_time_calibration+ns);
 }
 
 
@@ -195,7 +209,7 @@ void isr_default_handler()
 	f = bsp_fsave();
 	int_id = get_psr();
 
-	sys_interrupt_enter();
+	sys_interrupt_enter(int_id);
 	
 	if (int_id < MAX_HANDLERS) {
         isr = (ISR_FUNC)isr_table[int_id];
@@ -203,8 +217,12 @@ void isr_default_handler()
             isr(int_id);
         }
     }
+	else
+	{
+		kprintf("warning: unknown interrupt:%d\n", int_id);
+	}
 
-	sys_interrupt_exit();
+	sys_interrupt_exit(int_id);
 	bsp_frestore(f);
 }
 

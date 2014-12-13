@@ -17,8 +17,12 @@
 #include <memory.h>
 
 #include "stm32f2xx.h"
+#include "stm32f2xx_tim.h"
+#include "stm32f2xx_rcc.h"
 #include "journal.h"
 #include "uart.h"
+#include "uprintf.h"
+#include "net/net_task.h"
 
 char _irq_stack_start[1024];
 
@@ -32,6 +36,9 @@ extern void samv_agent_init();
 extern void  systick_init (void);
 extern void interrupt_init();
 extern void kservice_init();
+extern void lwip_sys_init();
+extern void lwip_perf_init();
+extern void ETH_BSP_Config(void);
 
 #ifdef INCLUDE_USER_APP_INIT
 extern void user_app_init();
@@ -71,38 +78,46 @@ void udelay_init()
 
 static void root_task(void *p)
 {
-	kprintf("  Root task started...\n");
+	//kprintf("  Root task started...\n");
 
 	clock_init(INT_SYSTICK);
 	systick_init();
 	kprintf("  Clock subsystem inited.\n");
+
+	uprintf_init();
+	kprintf("  Uprintf task started.\n");
 	
 	console_init();
 	kprintf("  Console subsystem inited.\n");
 
+#ifdef INLCUDE_KSERV
 	kservice_init();
-	kprintf("  tkservice started.\n");
-//	command_init();
-//	kprintf("  Shell subsystem inited.\n");
+	kprintf("  kservice task started.\n");
+#endif
 
-	samv_agent_init();
-	kprintf("  Samv agent inited.\n");
+#ifdef INLCUDE_COMMAND
+	command_init();
+	kprintf("  Shell subsystem inited.\n");
+#endif
 
 	#ifdef INCLUDE_GDB_STUB
-//	gdb_stub_init();
-//	kprintf("  gdb stub inited.\n");
+	gdb_stub_init();
+	kprintf("  gdb stub inited.\n");
 	#endif /* INCLUDE_GDB_STUB */
 
-	/* a temp wrapper */
-//	net_task_init();
-//	lwip_sys_init();
-//	kprintf("  LWIP inited.\n");
+	#ifdef INCLUDE_NETWORK
+	net_task_init();
+	ETH_BSP_Config();  // ETH base address: 0x40028000
+	lwip_sys_init();
+	lwip_perf_init();
+	kprintf("  net inited.\n");
+	#endif
 
 	udelay_init();
 	
 	user_app_init();
 
-	kprintf("  Root task ended.\n");
+	//kprintf("  Root task ended.\n");
 }
 static void root_task_init()
 {
@@ -119,9 +134,6 @@ static void root_task_init()
 static void default_sched_hook(struct dtask *from, struct dtask *to)
 {
 	uint8_t *ptr_stack;
-
-	/* update sched history */
-	journal_task_switch(from, to);
 	
 	/* check stack overflow: if task is dead, we don't check it */
 	if(from->state != TASK_STATE_DEAD)
@@ -141,6 +153,36 @@ static void default_sched_hook(struct dtask *from, struct dtask *to)
 	
 }
 
+/* time counter init: for high solution time (bsp_gettime)
+ * timer resolution is 1us, period is 1s
+ */
+void TIM_init()
+{
+	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+	uint16_t PrescalerValue;
+	#define TIMFREQ (1000000000/1000)
+	
+	/* TIM2 clock enable */
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+
+	/* Compute the prescaler value */
+	PrescalerValue = (uint16_t) ((SystemCoreClock/2) / TIMFREQ) - 1;
+
+	/* Time base configuration */
+	TIM_TimeBaseStructure.TIM_Period = TIMFREQ - 1;
+	TIM_TimeBaseStructure.TIM_Prescaler = 0;
+	TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+
+	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
+
+	/* Prescaler configuration */
+	TIM_PrescalerConfig(TIM2, PrescalerValue, TIM_PSCReloadMode_Immediate);
+
+	/* TIM2 enable counter */
+	TIM_Cmd(TIM2, ENABLE);
+}
+
 /* hardware init before os is ready */
 void os_hw_init()
 {
@@ -149,6 +191,8 @@ void os_hw_init()
 
 	/* init interrupt related matters */
 	interrupt_init();
+
+	TIM_init();
 }
 
 // TODO: To standard this scenario
@@ -158,7 +202,7 @@ void start_dooloo(void)
 
 	os_hw_init();
 
-	kprintf("\n\nDooloo Operating System Version %s\n", DOOLOO_VERSION);
+	kprintf("\n\nProbability kernel: version %s\n", DOOLOO_VERSION);
 	kprintf("Author: Puhui Xiong (bearix@hotmail.com) \n\n");
 
 	/* trace irq stack */

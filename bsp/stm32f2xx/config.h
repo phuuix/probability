@@ -3,12 +3,14 @@
 /*********************************************************************/
 
 /* config.h
-  * configure file for LPC2214 without external memory
+  * configure file for STM32f2xx without external memory
  */
 
 #ifndef __D_SYSCONFIG_H__
 #define __D_SYSCONFIG_H__
 
+#define INCLUDE_PMCOUNTER
+#define INCLUDE_JOURNAL
 
 /* user_app_init entry */
 //#define INCLUDE_USER_APP_INIT
@@ -17,7 +19,7 @@
 /* gdb stub module configure                                         */
 /*********************************************************************/
 /* include gdb stub module */
-#define INCLUDE_GDB_STUB
+//#define INCLUDE_GDB_STUB
 /* the approch to connect to gdb stub: udp or serial port */
 #define GDB_REMOTE_UDP
 //#define GDB_REMOTE_SERIAL
@@ -49,6 +51,11 @@
 /* block queue is size sensitive */
 #define BLOCKQ_IS_SIZE_SENSTIVE 1
 
+/* print task's stack size */
+#define TPRINT_STACK_SIZE	0x400
+/* print task's priority */
+#define TPRINT_PRIORITY		210
+
 /*********************************************************************/
 /* memory module configure                                           */
 /*********************************************************************/
@@ -61,12 +68,12 @@
 #define MEMORY_SIZE64_N     80
 #define MEMORY_SIZE256_N    20
 #define MEMORY_SIZE768_N    8
-#define MEMORY_SIZEBIG_N    4
+#define MEMORY_SIZEBIG_N    2
 
 #define MEMORY_SIZE64       64
 #define MEMORY_SIZE256      256
 #define MEMORY_SIZE768      1024
-#define MEMORY_SIZEBIG      1600
+#define MEMORY_SIZEBIG      2048
 
 /*********************************************************************/
 /* page module configure                                             */
@@ -129,7 +136,13 @@
 /*********************************************************************/
 /* net module configure                                              */
 /*********************************************************************/
+/* net task's stack size */
+#define TNET_STACK_SIZE	0x400
+/* net task's priority */
+#define TNET_PRIORITY	0x3
+
 /* lwip tcp/ip stack */
+#define INCLUDE_NETWORK
 #define IP_STACK_LWIP
 
 /* max hareware address length */

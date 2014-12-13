@@ -1,26 +1,22 @@
-/**
- * Copyright (c) 2011-2012 Phuuix Xiong <phuuix@163.com>
- *
+/*
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  *
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
  * @file
- * A portable timer lib
+ *   A portable timer lib
  *
  * @History
- * Phuuix Xiong, Create, 01-25-2011
+ *   AUTHOR         DATE                 NOTES
+ *   
  */
+
 #include <stdlib.h>
 #include <assert.h>
 
@@ -151,7 +147,7 @@ void ptimer_cancel(ptimer_table_t *table, ptimer_t *timer)
 void ptimer_consume_time(ptimer_table_t *table, uint32_t time)
 {
 	ptimer_t *timer;
-	uint32_t i;
+	uint32_t i, ret;
 	
 	if(table == NULL) return;
 	
@@ -180,11 +176,11 @@ void ptimer_consume_time(ptimer_table_t *table, uint32_t time)
 //			ZLOG_DEBUG("timer expired: 0x%p at slot %u\n", timer, table->curslot);
 			if(timer->onexpired_func)
 			{
-				timer->onexpired_func(timer, timer->param[0], timer->param[1]);
+				ret = timer->onexpired_func(timer, timer->param[0], timer->param[1]);
 			}
 			
 			/* if periodic timer */
-			if((timer->flags & PTIMER_FLAG_PERIODIC) && !(timer->flags & PTIMER_FLAG_RUNNING))
+			if((timer->flags & PTIMER_FLAG_PERIODIC) && (ret == 0))
 				ptimer_start(table, timer, timer->duration);
 		}
 		

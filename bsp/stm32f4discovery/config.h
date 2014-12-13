@@ -1,5 +1,5 @@
 /*********************************************************************/
-/* Dooloo OS                                                          */
+/* PROBABILITY OS                                                    */
 /*********************************************************************/
 
 /* config.h
@@ -9,6 +9,8 @@
 #ifndef __D_SYSCONFIG_H__
 #define __D_SYSCONFIG_H__
 
+#define INCLUDE_PMCOUNTER
+#define INCLUDE_JOURNAL
 
 /* user_app_init entry */
 //#define INCLUDE_USER_APP_INIT

@@ -10,6 +10,7 @@
 #include "stm32f4xx.h"
 #include "core_cm4.h"
 #include "stm32f4xx_rcc.h"
+#include "stm32f4xx_tim.h"
 #include "siprintf.h"
 #include "uart.h"
 
@@ -23,6 +24,7 @@ static uint32_t isr_table[MAX_HANDLERS];
 static void dummy_isr_fun(int i);
 extern char _irq_stack_start[];
 extern struct dtask systask[];
+extern uint32_t time(uint32_t *t);
 
 void dump_buffer(uint8_t *buffer, uint16_t length)
 {
@@ -39,6 +41,12 @@ void dump_buffer(uint8_t *buffer, uint16_t length)
 	kprintf("\n");
 }
 
+void bsp_gettime(uint32_t *tv_sec, uint32_t *tv_nsec)
+{
+#define CONST_COUNTER2NS 1000
+	*tv_sec = time(NULL);
+	*tv_nsec = TIM_GetCounter(TIM2)*CONST_COUNTER2NS;
+}
 
 /* Init registers stacked as if auto-saved on exception */
 char *bsp_task_init(int t, void (*task)(void *p), void *parm,
@@ -300,6 +308,7 @@ void  systick_init (void)
     cnts = rcc_clocks.HCLK_Frequency / TICKS_PER_SECOND;
 
 	SysTick->LOAD = (cnts - 1);
+	SysTick->VAL = 0;
 	SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
 }
 

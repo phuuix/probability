@@ -14,7 +14,7 @@
 #include <stdlib.h>
 
 #include "ipc.h"
-#include "samv_agent.h"
+//#include "samv_agent.h"
 #include "usbd_conf.h"
 #include "usbd_stb_core.h"
 #include "usbd_desc.h"
@@ -359,7 +359,7 @@ static uint8_t  usbd_stb_DataOut (void *pdev, uint8_t epnum)
   //KPRINTF("usbd_stb_DataOut: core_id=%d buf=0x%x len=%d\n", 
   //		usbd_data->core_id, usbd_data->USB_Rx_Buffer, USB_Rx_Cnt);
   //dump_buffer(usbd_data->USB_Rx_Buffer, USB_Rx_Cnt);
-
+#if 0
   /* post to samv */
   samv_mail_t mail;
 
@@ -374,7 +374,7 @@ static uint8_t  usbd_stb_DataOut (void *pdev, uint8_t epnum)
     if(USB_Rx_Cnt==0 || mbox_post(&samv_mbox, (uint32_t *)&mail) != ROK)
       free(mail.bufptr);
   }
-  
+#endif
   /* Prepare Out endpoint to receive next packet */
   DCD_EP_PrepareRx(pdev,
                    STB_OUT_EP,

@@ -5,6 +5,7 @@
 diff: include/types.h
 diff: include/assert.h
 diff: include/stddef.h
+diff: include/endian.h
 too much diff: include/stdio.h #no filesystem
 too much diff: include/unistd.h #just a stub
 diff: errno_location.c

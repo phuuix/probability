@@ -29,8 +29,12 @@
 #define __FLOAT_WORD_ORDER	__BYTE_ORDER
 #endif
 
+#ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN		__LITTLE_ENDIAN
+#endif
+#ifndef BIG_ENDIAN
 #define BIG_ENDIAN		__BIG_ENDIAN
+#endif
 #define BYTE_ORDER		__BYTE_ORDER
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN

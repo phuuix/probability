@@ -9,31 +9,31 @@
 #include "stm32f4xx_rcc.h"
 #include "uart.h"
 
-#define COMn 1
+#define COMn 2
 
-USART_TypeDef* COM_USART[COMn] = {USART3}; 
+USART_TypeDef* COM_USART[COMn] = {USART1, USART3}; 
 
-GPIO_TypeDef* COM_TX_PORT[COMn] = {GPIOC};
+GPIO_TypeDef* COM_TX_PORT[COMn] = {GPIOB, GPIOC};
  
-GPIO_TypeDef* COM_RX_PORT[COMn] = {GPIOC};
+GPIO_TypeDef* COM_RX_PORT[COMn] = {GPIOB, GPIOC};
 
-const uint32_t COM_USART_CLK[COMn] = {RCC_APB1Periph_USART3};
+const uint32_t COM_USART_CLK[COMn] = {RCC_APB2Periph_USART1, RCC_APB1Periph_USART3};
 
-const uint32_t COM_TX_PORT_CLK[COMn] = {RCC_AHB1Periph_GPIOC};
+const uint32_t COM_TX_PORT_CLK[COMn] = {RCC_AHB1Periph_GPIOB, RCC_AHB1Periph_GPIOC};
  
-const uint32_t COM_RX_PORT_CLK[COMn] = {RCC_AHB1Periph_GPIOC};
+const uint32_t COM_RX_PORT_CLK[COMn] = {RCC_AHB1Periph_GPIOB, RCC_AHB1Periph_GPIOC};
 
-const uint16_t COM_TX_PIN[COMn] = {GPIO_Pin_10};
+const uint16_t COM_TX_PIN[COMn] = {GPIO_Pin_6, GPIO_Pin_10};
 
-const uint16_t COM_RX_PIN[COMn] = {GPIO_Pin_11};
+const uint16_t COM_RX_PIN[COMn] = {GPIO_Pin_7, GPIO_Pin_11};
  
-const uint8_t COM_TX_PIN_SOURCE[COMn] = {GPIO_PinSource10};
+const uint8_t COM_TX_PIN_SOURCE[COMn] = {GPIO_PinSource6, GPIO_PinSource10};
 
-const uint8_t COM_RX_PIN_SOURCE[COMn] = {GPIO_PinSource11};
+const uint8_t COM_RX_PIN_SOURCE[COMn] = {GPIO_PinSource7, GPIO_PinSource11};
  
-const uint8_t COM_TX_AF[COMn] = {GPIO_AF_USART3};
+const uint8_t COM_TX_AF[COMn] = {GPIO_AF_USART1, GPIO_AF_USART3};
  
-const uint8_t COM_RX_AF[COMn] = {GPIO_AF_USART3};
+const uint8_t COM_RX_AF[COMn] = {GPIO_AF_USART1, GPIO_AF_USART3};
 
 
 void uart_init(uint8_t COM, uint32_t baudrate)

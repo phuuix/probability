@@ -1,32 +1,22 @@
-/*************************************************************************/
-/* The Dooloo kernel                                                     */
-/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
-/* All Rights Reserved.                                                  */
-/*                                                                       */
-/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
-/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
-/*                                                                       */
-/*************************************************************************/
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ *
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
+ *   task management related routines
+ *
+ * @History
+ *   AUTHOR         DATE                 NOTES
+ *   puhuix           2006-8-28             introduce bitmap O(1) scheduler, adapt for process
+ */
 
-/*************************************************************************
- *
- * FILE                                       VERSION
- *   task.c                                    0.3.0
- *
- * COMPONENT
- *   Kernel
- *
- * DESCRIPTION
- *    task management related routines
- *
- * CHANGELOG
- *   AUTHOR         DATE                    NOTES
- *   Bearix         2006-8-20               Version 0.3.0
- *   Bearix         2006-8-28               introduce bitmap O(1) scheduler, adapt for process
- *************************************************************************/ 
-
-
-/* Remark: Task specialed routine can't be called in interrupt handler */
 #include <config.h>
 #include <assert.h>
 #include <task.h>
@@ -62,17 +52,20 @@ extern char _irq_stack_start[];
  * called when system interrupt incoming
  * this function isn't used if bsp_task_switch==bsp_task_switch_interrupt
  */
-void sys_interrupt_enter()
+void sys_interrupt_enter(uint32_t irq)
 {
 	active_ints++;
-//	kprintf("sys_interrupt_enter(): active_ints=%d\n", active_ints);
+
+#ifdef INCLUDE_PMCOUNTER
+	PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nInterruptInCurrentTick], 1);
+#endif
 }
 
 /*
  * called after isr function is called
  * this function isn't used if bsp_task_switch==bsp_task_switch_interrupt
  */
-void sys_interrupt_exit()
+void sys_interrupt_exit(uint32_t irq)
 {
 	uint16_t stack_bottom = *(uint16_t *)_irq_stack_start;
 	
@@ -101,7 +94,7 @@ void task_unlock()
 }
 
 /* this callback always runs in interrupt-prohibit mode */
-static void task_timeout(void *timer, uint32_t t, uint32_t param2)
+static uint32_t task_timeout(void *timer, uint32_t t, uint32_t param2)
 {
 	struct dtask *task = &systask[t];
 
@@ -116,6 +109,8 @@ static void task_timeout(void *timer, uint32_t t, uint32_t param2)
 	readyq_enqueue(&sysready_queue, task);
 	task->state = TASK_STATE_READY;
 	task->wakeup_cause = RTIMEOUT;
+
+	return 0;
 }
 
 /*
@@ -144,11 +139,12 @@ void task_exit()
 	task->state = TASK_STATE_DEAD;
 	bsp_frestore(f);
 
-#ifdef JOURNAL
+#ifdef INCLUDE_JOURNAL
 	journal_task_exit(task);
 #endif
-
-	PMC_PEG_SYS32_COUNTER(PMC_U32_nTask,-1);
+#ifdef INCLUDE_PMCOUNTER
+	PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nTask],-1);
+#endif
 
 	/* free task's stack */
 	if(!(task->flags & TASK_FLAGS_STATICSTACK))
@@ -225,11 +221,12 @@ task_t task_create(char *name, void (*task_func)(void *), void *parm, char *stac
 		task->t_delay.onexpired_func = task_timeout;
 		task->t_delay.param[0] = i;
 
-#ifdef JOURNAL
+#ifdef INCLUDE_JOURNAL
 		journal_task_create(task);
 #endif
-
-		PMC_PEG_SYS32_COUNTER(PMC_U32_nTask,1);
+#ifdef INCLUDE_PMCOUNTER
+		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nTask],1);
+#endif
 
 		return i;
 	}
@@ -527,11 +524,18 @@ void task_schedule()
 
 	from = current;
 
-#ifdef JOURNAL
+#ifdef INCLUDE_JOURNAL
 	journal_task_switch(from, to);
 #endif
 
-	PMC_PEG_SYS32_COUNTER(PMC_U32_nTaskSwitch,1);
+#ifdef INCLUDE_PMCOUNTER
+	PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nTaskSwitch],1);
+
+	PMC_PEG_COUNTER(to->PMC_task32[PMC_U32_Task_nTaskSwitch], 1);
+
+	bsp_gettime(&to->time_in_sec, &to->time_in_ns);
+	from->time_accumulate_c_ns += to->time_in_ns - from->time_in_ns;
+#endif
 
 	/* call the task_schedule_hook() in from task's context */
 	if(task_schedule_hook)

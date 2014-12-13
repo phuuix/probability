@@ -15,7 +15,7 @@ int getline(char *buf, int len);
 
 #define TCONSOLE_STACK_SIZE 0x400
 #define TCONSOLE_PRIORITY 0x3
-#define INT_CONSOLE 39+16   //USART3
+#define INT_CONSOLE (37+16)   //USART1
 
 #define CBUF_SIZE 20
 static mbox_t console_mbox;

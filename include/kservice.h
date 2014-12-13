@@ -1,31 +1,35 @@
-/*************************************************************************/
-/* The Dooloo kernel                                                     */
-/* Copyright (C) 2004-2006 Xiong Puhui (Bearix)                          */
-/* All Rights Reserved.                                                  */
-/*                                                                       */
-/* THIS WORK CONTAINS TRADE SECRET AND PROPRIETARY INFORMATION WHICH IS  */
-/* THE PROPERTY OF DOOLOO RTOS DEVELOPMENT TEAM                          */
-/*                                                                       */
-/*************************************************************************/
-
-/*************************************************************************
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * FILE                                       VERSION
- *   kservice.h                                    0.3.0
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  *
- * COMPONENT
- *   Kernel
- *
- * DESCRIPTION
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
  *   privde kernel service such as CPU load statisstic
  *
- * CHANGELOG
- *   AUTHOR         DATE                    NOTES
- *   Bearix         2006-9-03               Version 0.3.0
- *************************************************************************/ 
+ * @History
+ *   AUTHOR         DATE           NOTES
+ */
 
 #ifndef __KSERVICE_H__
 #define __KSERVICE_H__
+
+typedef int (*kserv_func_t)(uint32_t param1, uint32_t param2);
+
+typedef struct kserv_mail
+{
+	uint8_t priority;
+	/* flags bit 0~1: period unit -- tick, s, minute, hour */
+	uint8_t flags;
+	uint16_t period;
+	kserv_func_t func;
+	uint32_t param[2];
+}kserv_mail_t;
 
 void kservice_init();
 

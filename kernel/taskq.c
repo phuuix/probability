@@ -1,4 +1,22 @@
-/* taskq.c: task queue implementation */
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ *
+ * Copyright (c) Puhui Xiong <phuuix@163.com>
+ * @file
+ *   task queue implementation
+ *
+ * @History
+ *   AUTHOR         DATE                 NOTES
+ *   puhuix           
+ */
+
 #include <task.h>
 #include <list.h>
 #include <assert.h>
@@ -91,7 +109,9 @@ void readyq_enqueue(readyq_t *readyq, struct dtask *task)
 	dllist_append(&(readyq->taskq_head[task->priority]), &task->qnode);
 	task->taskq = readyq;
 
-	PMC_PEG_SYS32_COUNTER(PMC_U32_nTaskReady,1);
+#ifdef INCLUDE_PMCOUNTER
+	PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nTaskReady],1);
+#endif
 }
 
 void readyq_dequeue(readyq_t *readyq, struct dtask *task)
@@ -109,7 +129,9 @@ void readyq_dequeue(readyq_t *readyq, struct dtask *task)
 	if(isempty)
 		bitmap_task_leave_ready(&readyq->bitmap, task->priority);
 
-	PMC_PEG_SYS32_COUNTER(PMC_U32_nTaskReady,-1);
+#ifdef INCLUDE_PMCOUNTER
+	PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nTaskReady],-1);
+#endif
 }
 
 struct dtask *readyq_select(readyq_t *readyq)
