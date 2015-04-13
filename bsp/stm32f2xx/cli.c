@@ -9,6 +9,7 @@
 #include "cli.h"
 #include "memory.h"
 #include "uprintf.h"
+#include "siprintf.h"
 #include "journal.h"
 
 /* all commands:
@@ -33,6 +34,7 @@ int cmd_help(struct shell_session *ss, int argc, char **argv)
 	ss->output("m <addr> <value>:  modify memroy\n");
 	ss->output("t <block> <value>: set trace level\n");
 	ss->output("s m|j|c:           show memory, journal, counter\n");
+	ss->output("z <string>:        ZLL commands\n");
 
 	return 0;
 }
@@ -182,6 +184,31 @@ int cmd_toggle_trace(struct shell_session *ss, int argc, char **argv)
 	return 0;
 }
 
+extern void processConsoleCommand( char *cmdBuff );
+int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
+{
+	char commands[128];
+	uint8_t i, n=0, l;
+
+	if(argc < 2)
+	{
+		ss->output("no parameters\n");
+		return 0;
+	}
+
+	for(i=1; i<argc; i++)
+	{
+		l = siprintf(&commands[n], 128-n,  "%s ", argv[i]);
+		n += l;
+	}
+
+	ss->output("Zigbee commands: %s\n", commands);
+	
+	processConsoleCommand(commands);
+	
+	return 0;
+}
+
 char *cmd_strtok(char **str, char separator)
 {
 	char *rstr;
@@ -298,6 +325,12 @@ int cmd_process(char *cmd)
 		case 's':
 		{
 			cmd_show(&session, argc, argv);
+			break;
+		}
+
+		case 'z':
+		{
+			cmd_zllctrl(&session, argc, argv);
 			break;
 		}
 		

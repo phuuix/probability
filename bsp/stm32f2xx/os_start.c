@@ -40,6 +40,8 @@ extern void lwip_sys_init();
 extern void lwip_perf_init();
 extern void ETH_BSP_Config(void);
 
+extern void usbh_cdc_init();
+
 #ifdef INCLUDE_USER_APP_INIT
 extern void user_app_init();
 #else
@@ -105,6 +107,8 @@ static void root_task(void *p)
 	kprintf("  gdb stub inited.\n");
 	#endif /* INCLUDE_GDB_STUB */
 
+	usbh_cdc_init();
+	
 	#ifdef INCLUDE_NETWORK
 	net_task_init();
 	ETH_BSP_Config();  // ETH base address: 0x40028000
@@ -117,7 +121,7 @@ static void root_task(void *p)
 	
 	user_app_init();
 
-	//kprintf("  Root task ended.\n");
+	kprintf("  Root task ended.\n");
 }
 static void root_task_init()
 {

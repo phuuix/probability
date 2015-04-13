@@ -51,12 +51,14 @@ static uint32_t uprintf_logflags = UPRINTF_LOGTIME | UPRINTF_LOGLEVEL | UPRINTF_
 extern int kprint_outchar(printdev_t *dev, char c);
 extern int printi(printdev_t *dev, int i, int b, int sg, int width, int pad, int letbase);
 extern int prints(printdev_t *dev, const char *string, int width, int pad);
+int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms);
 
 static void uprintf_task(void *p)
 {
 	int flags;
 	uint16_t i, j;
 	char *bufptr;
+	uint16_t uprintf_buf_rdpt_local;
 
 	/* set CLI block default enabled */
 	uprintf_set_enable(UPRINT_INFO, UPRINT_BLK_CLI, 1);
@@ -72,18 +74,16 @@ static void uprintf_task(void *p)
 	for(;;)
 	{
 		flags = bsp_fsave();
-		if(uprintf_bufstat[uprintf_buf_rdpt] == UPRINTF_BUFSTAT_BUSY)
-		{
-			bufptr = uprintf_buffer[uprintf_buf_rdpt];
-			uprintf_bufstat[uprintf_buf_rdpt] = UPRINTF_BUFSTAT_IDLE;
-			uprintf_buf_rdpt = (uprintf_buf_rdpt+1)&(UPRINTF_BUFNUM-1);
-		}
-		else
+		uprintf_buf_rdpt_local = uprintf_buf_rdpt;
+		bsp_frestore(flags);
+
+		if(uprintf_bufstat[uprintf_buf_rdpt_local] == UPRINTF_BUFSTAT_IDLE)
 		{
 			bufptr = NULL;
 			task_block(NULL);
 		}
-		bsp_frestore(flags);
+		else
+			bufptr = uprintf_buffer[uprintf_buf_rdpt_local];
 		
 		if (bufptr)
 		{
@@ -96,6 +96,16 @@ static void uprintf_task(void *p)
 				// TODO: replace kprint_outchar with a parameter
 				kprint_outchar(NULL, bufptr[i]);
 			}
+
+			
+			flags = bsp_fsave();
+			if(uprintf_buf_rdpt_local == uprintf_buf_rdpt)
+			{
+				// uprintf_buf_rdpt isn't changed by vuprintf()
+				uprintf_bufstat[uprintf_buf_rdpt_local] = UPRINTF_BUFSTAT_IDLE;
+				uprintf_buf_rdpt = (uprintf_buf_rdpt+1)&(UPRINTF_BUFNUM-1);
+			}
+			bsp_frestore(flags);
 		}
 	}
 }
@@ -142,70 +152,13 @@ void uprintf_set_flags(uint32_t flags)
 int uprintf(uint8_t level, uint8_t block_id, char *fmt,...)
 {
 	va_list parms;
-	int flags;
-	char *prtbuf;
-	printdev_t sprintdev;
-	uint16_t uprintf_buf_wtpt_local;
+	int n;
 
-	/* check if the print can go through */
-	if(!uprintf_enabled(level, block_id))
-	{
-		return 0;
-	}
-		
-	/* get buffer ptr for print and update buffer ptr */
-	flags = bsp_fsave();
-	uprintf_buf_wtpt_local = uprintf_buf_wtpt;
-	uprintf_buf_wtpt = (uprintf_buf_wtpt+1) & (UPRINTF_BUFNUM-1);  
-	prtbuf = uprintf_buffer[uprintf_buf_wtpt_local];
-	if(uprintf_bufstat[uprintf_buf_wtpt_local] == UPRINTF_BUFSTAT_BUSY)
-	{
-		uprintf_bufstat[uprintf_buf_wtpt_local] = UPRINTF_BUFSTAT_IDLE;
-#ifdef INCLUDE_PMCOUNTER
-		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nUprintOverwriten],1);
-#endif
-	}
-	bsp_frestore(flags);
-	
-	sprintdev.internal = prtbuf;
-	sprintdev.limit = UPRINTF_BUFSIZE-1;
-	sprintdev.offset = 0;
-	sprintdev.outchar = string_outchar;
-	
-	if(uprintf_logflags & UPRINTF_LOGTIME) // add 9 more bytes
-	{
-		printi(&sprintdev, tick(), 16, 0, 8 /* width */, 2 /* PAD_ZERO */, 'a');
-		prints(&sprintdev, " ", 0, 0);
-	}
-	
-	if(uprintf_logflags & UPRINTF_LOGLEVEL) // add 5 more bytes
-	{
-		prints(&sprintdev, "LVL", 0, 0);
-		printi(&sprintdev, level, 16, 0, 0, 0, 'a');
-		prints(&sprintdev, " ", 0, 0);
-	}
-	
-	if(uprintf_logflags & UPRINTF_LOGBLOCK) // add 6 more bytes
-	{
-		prints(&sprintdev, "BLK", 0, 0);
-		printi(&sprintdev, block_id, 16, 0, 2 /* width */, 2 /* PAD_ZERO */, 'a');
-		prints(&sprintdev, " ", 0, 0);
-	}
-	
 	va_start(parms,fmt);
-	doiprintf(&sprintdev,fmt,parms);
+	n = vuprintf(level, block_id, fmt, parms);
 	va_end(parms);
 	
-	/* terminate the string */
-	prtbuf[sprintdev.offset] = '\0';
-
-	/* notify the t_print task */
-	flags = bsp_fsave();
-	uprintf_bufstat[uprintf_buf_wtpt_local] = UPRINTF_BUFSTAT_BUSY;
-	if(t_print) task_wakeup(t_print);
-	bsp_frestore(flags);
-	
-	return(sprintdev.offset);
+	return(n);
 }
 
 int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms)
@@ -221,14 +174,16 @@ int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms)
 		return 0;
 	}
 		
-	/* get buffer ptr for print and update buffer ptr */
+	/* get buffer ptr for print and update write buffer ptr */
 	flags = bsp_fsave();
 	uprintf_buf_wtpt_local = uprintf_buf_wtpt;
 	uprintf_buf_wtpt = (uprintf_buf_wtpt+1) & (UPRINTF_BUFNUM-1);  
 	prtbuf = uprintf_buffer[uprintf_buf_wtpt_local];
 	if(uprintf_bufstat[uprintf_buf_wtpt_local] == UPRINTF_BUFSTAT_BUSY)
 	{
+		// overwritten happens, must advance read pointer
 		uprintf_bufstat[uprintf_buf_wtpt_local] = UPRINTF_BUFSTAT_IDLE;
+		uprintf_buf_rdpt = (uprintf_buf_rdpt+1)&(UPRINTF_BUFNUM-1);
 #ifdef INCLUDE_PMCOUNTER
 		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nUprintOverwriten],1);
 #endif
@@ -265,11 +220,12 @@ int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms)
 	/* terminate the string */
 	prtbuf[sprintdev.offset] = '\0';
 
-	/* notify the t_print task */
-	flags = bsp_fsave();
+	/* after print complete, we can mark buffer busy */
 	uprintf_bufstat[uprintf_buf_wtpt_local] = UPRINTF_BUFSTAT_BUSY;
-	if(t_print) task_wakeup(t_print);
-	bsp_frestore(flags);
+	
+	/* notify the t_print task */
+	if(t_print)
+		task_wakeup(t_print);
 
 	return(sprintdev.offset);
 }

@@ -14,6 +14,7 @@
 #include "stm32f2xx_tim.h"
 #include "siprintf.h"
 #include "uart.h"
+#include "journal.h"
 
 #define MAX_HANDLERS	100
 
@@ -304,6 +305,10 @@ void panic(char *infostr)
 
 	/* dump memory usage */
 	memory_dump();
+
+	/* dump journal and counters */
+	journal_dump();
+	pmc_dump();
 	
     while(1);
 }

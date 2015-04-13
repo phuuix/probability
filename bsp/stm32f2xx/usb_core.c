@@ -957,7 +957,7 @@ USB_OTG_STS USB_OTG_HC_Init(USB_OTG_CORE_HANDLE *pdev , uint8_t hc_num)
   return status;
 }
 
-
+#include "uprintf.h"
 /**
 * @brief  USB_OTG_HC_StartXfer : Start transfer
 * @param  pdev : Selected device

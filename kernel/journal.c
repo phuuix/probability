@@ -168,32 +168,31 @@ void journal_ipc_destroy(ipc_t *ipc)
 	JOURNAL_CLASS2_UPDATENEXT();
 }
 
+/* 
+ * dump journal information 
+ * We use kprintf instead of uprintf in journal_dump() because it will be called in crash dump
+ */
 void journal_dump()
 {
-	int idx, flags;
+	int idx;
 	uint32_t *ptr1, *ptr2;
 
 	/* in this function we assume JOURNAL_CLASS1_MAXRECORD and JOURNAL_CLASS2_MAXRECORD is power of 2 */
-	flags = uprintf_get_flags();
-	uprintf_set_flags(0);
-	
-	uprintf(UPRINT_INFO, UPRINT_BLK_CLI, "\nClass1 journal (index=%d):\n", journal_class1_index);
+	kprintf("\nClass1 journal (index=%d):\n", journal_class1_index);
 	for(idx=0; idx<JOURNAL_CLASS1_MAXRECORD; idx+=2)
 	{
 		ptr1 = (uint32_t *)&journal_class1_history[idx];
 		ptr2 = (uint32_t *)&journal_class1_history[idx+1];
-		uprintf(UPRINT_INFO, UPRINT_BLK_CLI, " 0x%08x 0x%08x 0x%08x    0x%08x 0x%08x 0x%08x\n", ptr1[0], ptr1[1], ptr1[2], ptr2[0], ptr2[1], ptr2[2]);
+		kprintf(" 0x%08x 0x%08x 0x%08x    0x%08x 0x%08x 0x%08x\n", ptr1[0], ptr1[1], ptr1[2], ptr2[0], ptr2[1], ptr2[2]);
 	}
 
-	uprintf(UPRINT_INFO, UPRINT_BLK_CLI, "Class2 journal (index=%d):\n", journal_class2_index);
+	kprintf("Class2 journal (index=%d):\n", journal_class2_index);
 	for(idx=0; idx<JOURNAL_CLASS2_MAXRECORD; idx+=2)
 	{
 		ptr1 = (uint32_t *)&journal_class2_history[idx];
 		ptr2 = (uint32_t *)&journal_class2_history[idx+1];
-		uprintf(UPRINT_INFO, UPRINT_BLK_CLI, " 0x%08x 0x%08x 0x%08x    0x%08x 0x%08x 0x%08x\n", ptr1[0], ptr1[1], ptr1[2], ptr2[0], ptr2[1], ptr2[2]);
+		kprintf(" 0x%08x 0x%08x 0x%08x    0x%08x 0x%08x 0x%08x\n", ptr1[0], ptr1[1], ptr1[2], ptr2[0], ptr2[1], ptr2[2]);
 	}
-
-	uprintf_set_flags(flags);
 }
 #endif // INCLUDE_JOURNAL
 
@@ -231,30 +230,26 @@ void pmc_calc_cpu_usage()
 
 void pmc_dump()
 {
-	uint32_t i, flags;
+	uint32_t i;
 
-	uprintf(UPRINT_INFO, UPRINT_BLK_CLI, "System level counters (total %d):\n", PMC_U32_nSysmax);
-	flags = uprintf_get_flags();
-	uprintf_set_flags(0);
+	kprintf("System level counters (total %d):\n", PMC_U32_nSysmax);
 	
 	i=0;
 	while(i<PMC_U32_nSysmax)
 	{
-		uprintf(UPRINT_INFO, UPRINT_BLK_CLI, " %08d", PMC_sys32_counter[i]);
+		kprintf(" %08d", PMC_sys32_counter[i]);
 		i++;
 		if(!(i & (8-1))) 
-			uprintf(UPRINT_INFO, UPRINT_BLK_CLI, "\n");
+			kprintf("\n");
 	}
-	uprintf(UPRINT_INFO, UPRINT_BLK_CLI, "\n");
+	kprintf("\n");
 
 	for(i=1; i<MAX_TASK_NUMBER; i++)
 	{
 		if(systask[i].state != TASK_STATE_DEAD)
-			uprintf(UPRINT_INFO, UPRINT_BLK_CLI, "Task %d counters: %08d %08d %08d\n", i, 
+			kprintf("Task %d counters: %08d %08d %08d\n", i, 
 				systask[i].PMC_task32[0]/1000, systask[i].PMC_task32[1], systask[i].PMC_task32[2]);
 	}
-
-	uprintf_set_flags(flags);
 }
 
 #endif // INCLUDE_PMCOUNTER

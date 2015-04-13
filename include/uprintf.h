@@ -40,7 +40,7 @@
 
 #define UPRINT_MAX_BLOCK 16
 #define UPRINTF_BUFSIZE    200
-#define UPRINTF_BUFNUM     32						/* must be power of 2 */
+#define UPRINTF_BUFNUM     64						/* must be power of 2 */
 
 int uprintf(uint8_t level, uint8_t block_id, char *fmt,...);
 void uprintf_set_enable(uint8_t level,uint8_t block_id,uint8_t enable);
