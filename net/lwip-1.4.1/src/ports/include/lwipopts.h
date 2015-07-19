@@ -201,8 +201,8 @@ The STM32F2x7 allows computing and verifying the IP, UDP, TCP and ICMP checksums
    ----------------------------------------
 */
 #define LWIP_DEBUG                      1
-#define NETIF_DEBUG                     0x80
-#define ETHARP_DEBUG                    0x00
+#define NETIF_DEBUG                     0x80  // 0x80: enable debug
+#define ETHARP_DEBUG                    0x80
 #define ICMP_DEBUG                      0x80
 #define IP_DEBUG                        0x80
 #define DHCP_DEBUG                      0x80

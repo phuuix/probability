@@ -25,6 +25,7 @@ http_server_netconn_serve(struct netconn *conn)
   char *buf;
   u16_t buflen;
   err_t err;
+  http_parser_t http_parser;
   
   /* Read the data from the port, blocking if nothing yet there. 
    We assume the request (the part we care about) is in one netbuf */
@@ -33,20 +34,52 @@ http_server_netconn_serve(struct netconn *conn)
   if (err == ERR_OK) {
     netbuf_data(inbuf, (void**)&buf, &buflen);
     
-    /* Is this an HTTP GET command? (only check the first 5 chars, since
-    there are other formats for GET, and we're keeping it very simple )*/
-    if (buflen>=5 &&
-        buf[0]=='G' &&
-        buf[1]=='E' &&
-        buf[2]=='T' &&
-        buf[3]==' ' &&
-        buf[4]=='/' ) {
-      
-      /* Send the HTML header 
+    memset(&http_parser, 0, sizeof(http_parser));
+    http_parse_request(buf, buflen, &http_parser);
+
+    if(http_parser.req_type == HTTP_REQTYPE_GET )
+    {
+      if(strcmp(http_parser.url, "/") == 0)
+      {
+        /* Send the HTML header 
              * subtract 1 from the size, since we dont send the \0 in the string
              * NETCONN_NOCOPY: our data is const static, so no need to copy it
+        */
+        netconn_write(conn, http_html_hdr, sizeof(http_html_hdr)-1, NETCONN_NOCOPY);
+
+        /* Send our HTML page */
+        netconn_write(conn, http_index_html, sizeof(http_index_html)-1, NETCONN_NOCOPY);
+      }
+      else
+      {
+        /* build request and send it to hue task */
+      }
+    }
+    else if(http_parser.req_type == HTTP_REQTYPE_POST && http_parser.content_type == HTTP_CONTENTTYPE_JSON)
+    {
+      /* call json parser: cJSON_ParseWithOpts 
+       * return a cJSON object
        */
+      
+      /* build a C structure from cJSON object and send to hue task */
+
+      /* wait for response from hue task with timeout */
+
+      /* send HTML header */
       netconn_write(conn, http_html_hdr, sizeof(http_html_hdr)-1, NETCONN_NOCOPY);
+
+      /* build HTML page based on response of hue */
+
+      /* send HTML response */
+    }
+    else if(http_parser.req_type == HTTP_REQTYPE_PUT && http_parser.content_type == HTTP_CONTENTTYPE_JSON)
+    {
+      // similar as POST request
+    }
+    else
+    {
+      /* Send the HTML header */
+      netconn_write(conn, http_html_hdr_err, sizeof(http_html_hdr_err)-1, NETCONN_NOCOPY);
       
       /* Send our HTML page */
       netconn_write(conn, http_index_html, sizeof(http_index_html)-1, NETCONN_NOCOPY);
@@ -96,7 +129,7 @@ http_server_netconn_thread(void *arg)
 void
 http_server_netconn_init()
 {
-  sys_thread_new("http_server_netconn", http_server_netconn_thread, NULL, DEFAULT_THREAD_STACKSIZE, DEFAULT_THREAD_PRIO);
+  sys_thread_new("thttpd", http_server_netconn_thread, NULL, DEFAULT_THREAD_STACKSIZE, DEFAULT_THREAD_PRIO);
 }
 
 #endif /* LWIP_NETCONN*/

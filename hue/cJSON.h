@@ -38,6 +38,7 @@ extern "C"
 #define cJSON_Object 6
 	
 #define cJSON_IsReference 256
+#define INJECT_CHAR(ptr, c, printed) { *ptr++ = (c); printed++; }
 
 /* The cJSON structure: */
 typedef struct cJSON {

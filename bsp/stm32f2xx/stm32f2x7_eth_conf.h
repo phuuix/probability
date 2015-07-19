@@ -68,42 +68,21 @@
 /* PHY Configuration delay */ 
 #define PHY_CONFIG_DELAY   ((uint32_t)0x00FFFFFF)
 
-#define PHY_8720_BCR													0
-#define PHY_8720_BSR													1
-
-/* definition for PHY_8720_BCR */
-#define PHY_8720_Reset                       ((uint16_t)0x8000)      /*!< PHY Reset */
-#define PHY_8720_Loopback                    ((uint16_t)0x4000)      /*!< Select loop-back mode */
-#define PHY_8720_FULLDUPLEX_100M             ((uint16_t)0x2100)      /*!< Set the full-duplex mode at 100 Mb/s */
-#define PHY_8720_HALFDUPLEX_100M             ((uint16_t)0x2000)      /*!< Set the half-duplex mode at 100 Mb/s */
-#define PHY_8720_FULLDUPLEX_10M              ((uint16_t)0x0100)      /*!< Set the full-duplex mode at 10 Mb/s */
-#define PHY_8720_HALFDUPLEX_10M              ((uint16_t)0x0000)      /*!< Set the half-duplex mode at 10 Mb/s */
-#define PHY_8720_AutoNegotiation             ((uint16_t)0x1000)      /*!< Enable auto-negotiation function */
-#define PHY_8720_Restart_AutoNegotiation     ((uint16_t)0x0200)      /*!< Restart auto-negotiation function */
-#define PHY_8720_Powerdown                   ((uint16_t)0x0800)      /*!< Select the power down mode */
-#define PHY_8720_Isolate                     ((uint16_t)0x0400)      /*!< Isolate PHY from MII */
-/* definition for PHY_8720_BSR */
-#define PHY_8720_BSR_100BT4                  ((uint16_t)0x8000)
-#define PHY_8720_BSR_100BT_FD                ((uint16_t)0x4000)
-#define PHY_8720_BSR_100BT_HD                ((uint16_t)0x2000)
-#define PHY_8720_BSR_10BT_FD                 ((uint16_t)0x1000)
-#define PHY_8720_BSR_10BT_HD                 ((uint16_t)0x0800)
-
 
 /* The PHY status register value change from a PHY to another, so the user have 
    to update this value depending on the used external PHY */
-#define PHY_SR    ((uint16_t)31) /* Value for LAN8720 PHY */
+#define PHY_SR    ((uint16_t)0) /* For RTL8021 PHY, BCR can reflect the auto negotiation status */
 
 /* The Speed and Duplex mask values change from a PHY to another, so the user
    have to update this value depending on the used external PHY */
-#define PHY_SPEED_STATUS            (0x04) /* Value for LAN8720 PHY */
-#define PHY_DUPLEX_STATUS           (0x10) /* Value for LAN8720 PHY */
+#define PHY_SPEED_STATUS            (0x2000) /* Value for LAN8720 PHY */
+#define PHY_DUPLEX_STATUS           (0x0100) /* Value for LAN8720 PHY */
 
    
 /* Exported macro ------------------------------------------------------------*/
 
 /* MII and RMII mode selection, for STM322xG-EVAL Board(MB786) RevB ***********/
-#define RMII_MODE  // User have to provide the 50 MHz clock by soldering a 50 MHz
+//#define RMII_MODE  // User have to provide the 50 MHz clock by soldering a 50 MHz
                      // oscillator (ref SM7745HEV-50.0M or equivalent) on the U3
                      // footprint located under CN3 and also removing jumper on JP5. 
                      // This oscillator is not provided with the board. 
@@ -111,11 +90,12 @@
                      // board User manual (UM1057).
 
                                      
-//#define MII_MODE
+#define MII_MODE
 
 /* Uncomment the define below to clock the PHY from external 25MHz crystal (only for MII mode) */
 #ifdef 	MII_MODE
- #define PHY_CLOCK_MCO
+/* MCO is unnecessary to config. Since X1 (XTALI) is already connected to an external 25MHz crystal (not from stm32f207) */
+ //#define PHY_CLOCK_MCO
 #endif
 
 

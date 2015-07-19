@@ -23,6 +23,7 @@
 #include "uart.h"
 #include "uprintf.h"
 #include "net/net_task.h"
+#include "stm32f2x7_eth_bsp.h"
 
 char _irq_stack_start[1024];
 
@@ -80,8 +81,6 @@ void udelay_init()
 
 static void root_task(void *p)
 {
-	//kprintf("  Root task started...\n");
-
 	clock_init(INT_SYSTICK);
 	systick_init();
 	kprintf("  Clock subsystem inited.\n");
@@ -92,6 +91,8 @@ static void root_task(void *p)
 	console_init();
 	kprintf("  Console subsystem inited.\n");
 
+	udelay_init();
+	
 #ifdef INLCUDE_KSERV
 	kservice_init();
 	kprintf("  kservice task started.\n");
@@ -107,20 +108,19 @@ static void root_task(void *p)
 	kprintf("  gdb stub inited.\n");
 	#endif /* INCLUDE_GDB_STUB */
 
-	usbh_cdc_init();
+	// old usbh conflict with RLC8021 pin assignment
+	//usbh_cdc_init();
 	
 	#ifdef INCLUDE_NETWORK
 	net_task_init();
 	ETH_BSP_Config();  // ETH base address: 0x40028000
 	lwip_sys_init();
-	lwip_perf_init();
+	//lwip_perf_init();
 	kprintf("  net inited.\n");
 	#endif
-
-	udelay_init();
 	
 	user_app_init();
-
+	
 	kprintf("  Root task ended.\n");
 }
 static void root_task_init()

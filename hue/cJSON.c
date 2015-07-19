@@ -33,7 +33,6 @@
 #include "cJSON.h"
 
 #define CJSON_SNPRINTF snprintf
-#define INJECT_CHAR(ptr, c, printed) { *ptr++ = (c); printed++; }
 
 static const char *ep;
 

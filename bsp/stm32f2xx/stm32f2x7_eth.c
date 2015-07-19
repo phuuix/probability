@@ -381,6 +381,9 @@ uint32_t ETH_Init(ETH_InitTypeDef* ETH_InitStruct, uint16_t PHYAddress)
       return ETH_ERROR;
     }
 
+	kprintf("ETH PHY addr %d: PHY linked status.\n", PHYAddress);
+	ETH_WritePHYRegister(PHYAddress, 0x04, 0x0DE1);
+		
     /* Reset Timeout counter */
     timeout = 0; 
     /* Enable Auto-Negotiation */
@@ -408,6 +411,8 @@ uint32_t ETH_Init(ETH_InitTypeDef* ETH_InitStruct, uint16_t PHYAddress)
     /* Read the result of the auto-negotiation */
     RegValue = ETH_ReadPHYRegister(PHYAddress, PHY_SR);
 
+	kprintf("ETH PHY addr %d: autoNegotiation done, BSR=0x%x, SR=0x%x\n", PHYAddress, ETH_ReadPHYRegister(PHYAddress, PHY_BSR), RegValue);
+	
     /* Configure the MAC with the Duplex Mode fixed by the auto-negotiation process */
     if((RegValue & PHY_DUPLEX_STATUS) != (uint32_t)RESET)
     {
@@ -424,14 +429,13 @@ uint32_t ETH_Init(ETH_InitTypeDef* ETH_InitStruct, uint16_t PHYAddress)
     if(RegValue & PHY_SPEED_STATUS)
     {  
       /* Set Ethernet speed to 10M following the auto-negotiation */    
-      ETH_InitStruct->ETH_Speed = ETH_Speed_10M; 
+      ETH_InitStruct->ETH_Speed = ETH_Speed_100M; 
     }
     else
     {   
       /* Set Ethernet speed to 100M following the auto-negotiation */ 
-      ETH_InitStruct->ETH_Speed = ETH_Speed_100M;      
+      ETH_InitStruct->ETH_Speed = ETH_Speed_10M;      
     }    
-	kprintf("RegValue=0x%x ETH_Mode=0x%x ETH_Speed=0x%x\n", RegValue, ETH_InitStruct->ETH_Mode, ETH_InitStruct->ETH_Speed);
   }
   else
   {
@@ -2176,7 +2180,7 @@ uint16_t ETH_ReadPHYRegister(uint16_t PHYAddress, uint16_t PHYReg)
 __IO uint32_t timeout = 0;
   /* Check the parameters */
   assert_param(IS_ETH_PHY_ADDRESS(PHYAddress));
-  assert_param(IS_ETH_PHY_REG(PHYReg));
+  //assert_param(IS_ETH_PHY_REG(PHYReg));
   
   /* Get the ETHERNET MACMIIAR value */
   tmpreg = ETH->MACMIIAR;
@@ -2223,7 +2227,7 @@ uint32_t ETH_WritePHYRegister(uint16_t PHYAddress, uint16_t PHYReg, uint16_t PHY
   __IO uint32_t timeout = 0;
   /* Check the parameters */
   assert_param(IS_ETH_PHY_ADDRESS(PHYAddress));
-  assert_param(IS_ETH_PHY_REG(PHYReg));
+  //assert_param(IS_ETH_PHY_REG(PHYReg));
   
   /* Get the ETHERNET MACMIIAR value */
   tmpreg = ETH->MACMIIAR;

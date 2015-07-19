@@ -209,6 +209,13 @@ int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 	return 0;
 }
 
+extern void eth_dump_phy_register();
+int cmd_ethtest(struct shell_session *ss, int argc, char **argv)
+{
+	eth_dump_phy_register();
+	return 0;
+}
+
 char *cmd_strtok(char **str, char separator)
 {
 	char *rstr;
@@ -331,6 +338,12 @@ int cmd_process(char *cmd)
 		case 'z':
 		{
 			cmd_zllctrl(&session, argc, argv);
+			break;
+		}
+
+		case 'e':
+		{
+			cmd_ethtest(&session, argc, argv);
 			break;
 		}
 		

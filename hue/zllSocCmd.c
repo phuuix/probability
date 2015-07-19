@@ -3,36 +3,6 @@
  *
  * This module contains the API for the zll SoC Host Interface.
  *
- * Copyright (C) 2013 Texas Instruments Incorporated - http://www.ti.com/ 
- * 
- * 
- *  Redistribution and use in source and binary forms, with or without 
- *  modification, are permitted provided that the following conditions 
- *  are met:
- *
- *    Redistributions of source code must retain the above copyright 
- *    notice, this list of conditions and the following disclaimer.
- *
- *    Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the 
- *    documentation and/or other materials provided with the   
- *    distribution.
- *
- *    Neither the name of Texas Instruments Incorporated nor the names of
- *    its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
- *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -46,7 +16,6 @@
 #include <stdlib.h>
 
 #include <errno.h>
-#include <assert.h>
 
 #include "ipc.h"
 #include "zllSocCmd.h"
@@ -91,16 +60,11 @@ len,   /*RPC payload Len                                      */     \
 #define ZLL_MT_APP_RPC_CMD_PERMIT_JOIN        0x05
 #define ZLL_MT_APP_RPC_CMD_SEND_RESET_TO_FN   0x06
 
-#define MT_APP_RSP                           0x80
-#define MT_APP_ZLL_TL_IND                    0x81
 #define MT_APP_ZLL_NEW_DEV_IND               0x82
-
-#define MT_DEBUG_MSG                         0x80
 
 #define COMMAND_LIGHTING_MOVE_TO_HUE  0x00
 #define COMMAND_LIGHTING_MOVE_TO_SATURATION 0x03
 #define COMMAND_LEVEL_MOVE_TO_LEVEL 0x00
-#define COMMAND_LIGHTING_MOVE_TO_COLOR  0x07
 
 /*** Foundation Command IDs ***/
 #define ZCL_CMD_READ                                    0x00
@@ -156,40 +120,7 @@ len,   /*RPC payload Len                                      */     \
 
 #define MT_RPC_SOF         0xFE
 
-typedef enum {
-  MT_RPC_CMD_POLL = 0x00,
-  MT_RPC_CMD_SREQ = 0x20,
-  MT_RPC_CMD_AREQ = 0x40,
-  MT_RPC_CMD_SRSP = 0x60,
-  MT_RPC_CMD_RES4 = 0x80,
-  MT_RPC_CMD_RES5 = 0xA0,
-  MT_RPC_CMD_RES6 = 0xC0,
-  MT_RPC_CMD_RES7 = 0xE0
-} mtRpcCmdType_t;
 
-typedef enum {
-  MT_RPC_SYS_RES0,   /* Reserved. */
-  MT_RPC_SYS_SYS,
-  MT_RPC_SYS_MAC,
-  MT_RPC_SYS_NWK,
-  MT_RPC_SYS_AF,
-  MT_RPC_SYS_ZDO,
-  MT_RPC_SYS_SAPI,   /* Simple API. */
-  MT_RPC_SYS_UTIL,
-  MT_RPC_SYS_DBG,
-  MT_RPC_SYS_APP,
-  MT_RPC_SYS_OTA,
-  MT_RPC_SYS_ZNP,
-  MT_RPC_SYS_SPARE_12,
-  MT_RPC_SYS_UBL = 13,  // 13 to be compatible with existing RemoTI.
-  MT_RPC_SYS_MAX        // Maximum value, must be last (so 14-32 available, not yet assigned).
-} mtRpcSysType_t;
-
-
-#define MT_CMD_ZDO_IEEE_ADDR_RSP    0x81
-#define MT_CMD_ZDO_DEVICE_ANNCE_IND 0xC1
-
-#define ZLL_CMD_BUF_SIZ 256
 /************************************************************
  * TYPEDEFS
  */
@@ -202,8 +133,7 @@ typedef enum {
  * LOCAL VARIABLES
  */
 uint8_t transSeqNumber = 0;
-uint8_t zll_cdc_tx_buf[ZLL_CMD_BUF_SIZ];
-zllSocCallbacks_t zllSocCb;
+uint8_t zll_cdc_tx_buf[256];
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -256,22 +186,6 @@ int zllctrl_write(int zll_fd, uint8_t *cmd, uint16_t cmd_len)
 	return mbox_post(&cdc_mbox, mail);
 }
 
-/*********************************************************************
- * @fn      zllSocRegisterCallbacks
- *
- * @brief   opens the serial port to the CC253x.
- *
- * @param   devicePath - path to the UART device
- *
- * @return  status
- */
-void zllSocRegisterCallbacks( zllSocCallbacks_t zllSocCallbacks)
-{
-  //copy the callback function pointers
-  memcpy(&zllSocCb, &zllSocCallbacks, sizeof(zllSocCallbacks_t));
-  return;  
-}
-
 
 /*********************************************************************
  * @fn      zllSocTouchLink
@@ -282,8 +196,8 @@ void zllSocRegisterCallbacks( zllSocCallbacks_t zllSocCallbacks)
  *
  * @return  none
  */
-void zllSocTouchLink(void)
-{  
+uint32_t zllSocTouchLink(uint8_t *cmbbuf)
+{
 	uint8_t tlCmd[] = {
 		APPCMDHEADER(13)
 		0x06, //Data Len
@@ -295,9 +209,13 @@ void zllSocTouchLink(void)
 		0x00,     //
 		0x00       //FCS - fill in later
     };
-	  
+	
     calcFcs(tlCmd, sizeof(tlCmd));
     zllctrl_write(0,tlCmd, sizeof(tlCmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, tlCmd, sizeof(tlCmd));
+    return sizeof(tlCmd);
 }
 
 /*********************************************************************
@@ -309,7 +227,7 @@ void zllSocTouchLink(void)
  *
  * @return  none
  */
-void zllSocResetToFn(void)
+uint32_t zllSocResetToFn(uint8_t *cmbbuf)
 {  
 	uint8_t tlCmd[] = {
 		APPCMDHEADER(13)
@@ -325,6 +243,10 @@ void zllSocResetToFn(void)
 	  
     calcFcs(tlCmd, sizeof(tlCmd));
     zllctrl_write(0,tlCmd, sizeof(tlCmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, tlCmd, sizeof(tlCmd));
+    return sizeof(tlCmd);
 }
 
 /*********************************************************************
@@ -336,7 +258,7 @@ void zllSocResetToFn(void)
  *
  * @return  none
  */
-void zllSocSendResetToFn(void)
+uint32_t zllSocSendResetToFn(uint8_t *cmbbuf)
 {  
 	uint8_t tlCmd[] = {
 		APPCMDHEADER(13)
@@ -352,6 +274,10 @@ void zllSocSendResetToFn(void)
 	  
     calcFcs(tlCmd, sizeof(tlCmd));
     zllctrl_write(0,tlCmd, sizeof(tlCmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, tlCmd, sizeof(tlCmd));
+    return sizeof(tlCmd);
 }
 
 /*********************************************************************
@@ -363,7 +289,7 @@ void zllSocSendResetToFn(void)
  *
  * @return  none
  */
-void zllSocOpenNwk(uint8_t duration)
+uint32_t zllSocOpenNwk(uint8_t *cmbbuf, uint8_t duration)
 {  
 	uint8_t cmd[] = {
 		APPCMDHEADER(13)
@@ -379,6 +305,10 @@ void zllSocOpenNwk(uint8_t duration)
 	  
     calcFcs(cmd, sizeof(cmd));
     zllctrl_write(0,cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -393,7 +323,7 @@ void zllSocOpenNwk(uint8_t duration)
  *
  * @return  none
  */
-void zllSocSetState(uint8_t state, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocSetState(uint8_t *cmbbuf, uint8_t state, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {
   	uint8_t cmd[] = {
   		0xFE,                                                                                      
@@ -417,6 +347,10 @@ void zllSocSetState(uint8_t state, uint16_t dstAddr, uint8_t endpoint, uint8_t a
   	calcFcs(cmd, sizeof(cmd));
   	
     zllctrl_write(0,cmd,sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -429,9 +363,9 @@ void zllSocSetState(uint8_t state, uint16_t dstAddr, uint8_t endpoint, uint8_t a
  * @param   endpoint - endpoint of the Light.
  * @param   addrMode - Unicast or Group cast.
  *
- * @return  none
+ * @return  size of command
  */
-void zllSocSetLevel(uint8_t level, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocSetLevel(uint8_t *cmbbuf, uint8_t level, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {
   	uint8_t cmd[] = {
   		0xFE,                                                                                                                                                                                    
@@ -458,6 +392,10 @@ void zllSocSetLevel(uint8_t level, uint16_t time, uint16_t dstAddr, uint8_t endp
     calcFcs(cmd, sizeof(cmd));
     
     zllctrl_write(0,cmd,sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -472,7 +410,7 @@ void zllSocSetLevel(uint8_t level, uint16_t time, uint16_t dstAddr, uint8_t endp
  *
  * @return  none
  */
-void zllSocSetHue(uint8_t hue, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocSetHue(uint8_t *cmbbuf, uint8_t hue, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {
 	uint8_t cmd[] = {
 		0xFE,                                                                                                                                                                                    
@@ -499,6 +437,10 @@ void zllSocSetHue(uint8_t hue, uint16_t time, uint16_t dstAddr, uint8_t endpoint
 
   calcFcs(cmd, sizeof(cmd));
   zllctrl_write(0,cmd,sizeof(cmd));
+
+  if(cmbbuf)
+    memcpy(cmbbuf, cmd, sizeof(cmd));
+  return sizeof(cmd);    
 }
 
 /*********************************************************************
@@ -513,7 +455,7 @@ void zllSocSetHue(uint8_t hue, uint16_t time, uint16_t dstAddr, uint8_t endpoint
  *
  * @return  none
  */
-void zllSocSetSat(uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t  endpoint, uint8_t addrMode)
+uint32_t zllSocSetSat(uint8_t *cmbbuf, uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t  endpoint, uint8_t addrMode)
 {
   uint8_t cmd[] = {
 		0xFE,                                                                                                                                                                                    
@@ -539,6 +481,10 @@ void zllSocSetSat(uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t  endpoin
 	
 	calcFcs(cmd, sizeof(cmd));
   zllctrl_write(0,cmd,sizeof(cmd));
+
+  if(cmbbuf)
+    memcpy(cmbbuf, cmd, sizeof(cmd));
+  return sizeof(cmd);    
 }
 
 /*********************************************************************
@@ -554,7 +500,7 @@ void zllSocSetSat(uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t  endpoin
  *
  * @return  none
  */
-void zllSocSetHueSat(uint8_t hue, uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocSetHueSat(uint8_t *cmbbuf, uint8_t hue, uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {
 	uint8_t cmd[] = { 
 		0xFE, 
@@ -581,6 +527,10 @@ void zllSocSetHueSat(uint8_t hue, uint8_t sat, uint16_t time, uint16_t dstAddr, 
 
   calcFcs(cmd, sizeof(cmd));
   zllctrl_write(0,cmd,sizeof(cmd));
+
+  if(cmbbuf)
+    memcpy(cmbbuf, cmd, sizeof(cmd));
+  return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -596,7 +546,7 @@ void zllSocSetHueSat(uint8_t hue, uint8_t sat, uint16_t time, uint16_t dstAddr, 
  *
  * @return  none
  */
-void zllSocSetColor(uint16_t x, uint16_t y, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocSetColor(uint8_t *cmbbuf, uint16_t x, uint16_t y, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {
 	uint8_t cmd[] = { 
 		0xFE, 
@@ -625,6 +575,10 @@ void zllSocSetColor(uint16_t x, uint16_t y, uint16_t time, uint16_t dstAddr, uin
 
   calcFcs(cmd, sizeof(cmd));
   zllctrl_write(0,cmd,sizeof(cmd));
+
+  if(cmbbuf)
+    memcpy(cmbbuf, cmd, sizeof(cmd));
+  return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -653,7 +607,7 @@ void zllSocSetColor(uint16_t x, uint16_t y, uint16_t time, uint16_t dstAddr, uin
  *
  * @return  none
  */
-void zllSocAddGroup(uint16_t groupId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocAddGroup(uint8_t *cmbbuf, uint16_t groupId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {  
 	uint8_t cmd[] = {
 		0xFE,                                                                                      
@@ -682,6 +636,10 @@ void zllSocAddGroup(uint16_t groupId, uint16_t dstAddr, uint8_t endpoint, uint8_
 	calcFcs(cmd, sizeof(cmd));
 	
   zllctrl_write(0,cmd,sizeof(cmd));
+
+  if(cmbbuf)
+    memcpy(cmbbuf, cmd, sizeof(cmd));
+  return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -697,7 +655,7 @@ void zllSocAddGroup(uint16_t groupId, uint16_t dstAddr, uint8_t endpoint, uint8_
  *
  * @return  none
  */
-void zllSocStoreScene(uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocStoreScene(uint8_t *cmbbuf, uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {  
 	uint8_t cmd[] = {
 		0xFE,                                                                                      
@@ -724,6 +682,10 @@ void zllSocStoreScene(uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8
 	calcFcs(cmd, sizeof(cmd));
 	
   zllctrl_write(0,cmd,sizeof(cmd));
+
+  if(cmbbuf)
+    memcpy(cmbbuf, cmd, sizeof(cmd));
+  return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -739,7 +701,7 @@ void zllSocStoreScene(uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8
  
  * @return  none
  */
-void zllSocRecallScene(uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocRecallScene(uint8_t *cmbbuf, uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {  
 	uint8_t cmd[] = {
 		0xFE,                                                                                      
@@ -766,6 +728,10 @@ void zllSocRecallScene(uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint
 	calcFcs(cmd, sizeof(cmd));
 	
   zllctrl_write(0,cmd,sizeof(cmd));
+
+  if(cmbbuf)
+    memcpy(cmbbuf, cmd, sizeof(cmd));
+  return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -777,7 +743,7 @@ void zllSocRecallScene(uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint
  *
  * @return  none
  */
-void zllSocBind(uint16_t srcNwkAddr, uint8_t srcEndpoint, uint8_t srcIEEE[8], uint8_t dstEndpoint, uint8_t dstIEEE[8], uint16_t clusterID )
+uint32_t zllSocBind(uint8_t *cmbbuf, uint16_t srcNwkAddr, uint8_t srcEndpoint, uint8_t srcIEEE[8], uint8_t dstEndpoint, uint8_t dstIEEE[8], uint16_t clusterID )
 {  
 	uint8_t cmd[] = {
 		0xFE,                                                                                      
@@ -817,6 +783,10 @@ void zllSocBind(uint16_t srcNwkAddr, uint8_t srcEndpoint, uint8_t srcIEEE[8], ui
 	          srcEndpoint, dstIEEE[0], dstIEEE[1], dstIEEE[2], dstIEEE[3], dstIEEE[4], dstIEEE[5], dstIEEE[6], dstIEEE[7], clusterID);
 	
   zllctrl_write(0,cmd,sizeof(cmd));
+
+  if(cmbbuf)
+    memcpy(cmbbuf, cmd, sizeof(cmd));
+  return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -830,7 +800,7 @@ void zllSocBind(uint16_t srcNwkAddr, uint8_t srcEndpoint, uint8_t srcIEEE[8], ui
  *
  * @return  none
  */
-void zllSocGetState(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocGetState(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {  	  
   	uint8_t cmd[] = {
   		0xFE,                                                                                      
@@ -856,6 +826,10 @@ void zllSocGetState(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
   	calcFcs(cmd, sizeof(cmd));
   	
     zllctrl_write(0,cmd,sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 } 
  
 /*********************************************************************
@@ -869,7 +843,7 @@ void zllSocGetState(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
  *
  * @return  none
  */
-void zllSocGetLevel(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocGetLevel(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {
   	uint8_t cmd[] = {
   		0xFE,                                                                                      
@@ -895,6 +869,10 @@ void zllSocGetLevel(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
   	calcFcs(cmd, sizeof(cmd));
   	
     zllctrl_write(0,cmd,sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 } 
 
 /*********************************************************************
@@ -908,7 +886,7 @@ void zllSocGetLevel(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
  *
  * @return  none
  */
-void zllSocGetHue(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocGetHue(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {
   	uint8_t cmd[] = {
   		0xFE,                                                                                      
@@ -934,6 +912,10 @@ void zllSocGetHue(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
   	calcFcs(cmd, sizeof(cmd));
   	
     zllctrl_write(0,cmd,sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 } 
 
 /*********************************************************************
@@ -947,7 +929,7 @@ void zllSocGetHue(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
  *
  * @return  none
  */
-void zllSocGetSat(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+uint32_t zllSocGetSat(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
 {
   	uint8_t cmd[] = {
   		0xFE,                                                                                      
@@ -973,6 +955,10 @@ void zllSocGetSat(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
   	calcFcs(cmd, sizeof(cmd));
   	
     zllctrl_write(0,cmd,sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 } 
 
 /*********************************************************************
@@ -984,7 +970,7 @@ void zllSocGetSat(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
  *
  * @return  none
  */
-void zllSocSysResetReq(uint8_t type)
+uint32_t zllSocSysResetReq(uint8_t *cmbbuf, uint8_t type)
 {
   	uint8_t cmd[] = {
   		0xFE,                                                                                      
@@ -998,6 +984,10 @@ void zllSocSysResetReq(uint8_t type)
   	calcFcs(cmd, sizeof(cmd));
   	
     zllctrl_write(0,cmd,sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 } 
 
 /*********************************************************************
@@ -1009,7 +999,7 @@ void zllSocSysResetReq(uint8_t type)
  *
  * @return  none
  */
-void zllSocSysPing()
+uint32_t zllSocSysPing(uint8_t *cmbbuf)
 {
 	uint8_t cmd[] = {
 		0xFE,
@@ -1022,7 +1012,12 @@ void zllSocSysPing()
 	calcFcs(cmd, sizeof(cmd));
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
+
 
 /*********************************************************************
  * @fn      zllSocSysVersion
@@ -1033,7 +1028,7 @@ void zllSocSysPing()
  *
  * @return  none
  */
-void zllSocSysVersion()
+uint32_t zllSocSysVersion(uint8_t *cmbbuf)
 {
 	uint8_t cmd[] = {
 		0xFE,
@@ -1046,6 +1041,10 @@ void zllSocSysVersion()
 	calcFcs(cmd, sizeof(cmd));
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1057,7 +1056,7 @@ void zllSocSysVersion()
  *
  * @return  none
  */
-void zllSocSysSetExtAddr(uint8_t *extAddr)
+uint32_t zllSocSysSetExtAddr(uint8_t *cmbbuf, uint8_t *extAddr)
 {
 	uint8_t cmd[] = {
 		0xFE,
@@ -1078,6 +1077,10 @@ void zllSocSysSetExtAddr(uint8_t *extAddr)
 	calcFcs(cmd, sizeof(cmd));
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1089,7 +1092,7 @@ void zllSocSysSetExtAddr(uint8_t *extAddr)
  *
  * @return  none
  */
-void zllSocSysGetExtAddr()
+uint32_t zllSocSysGetExtAddr(uint8_t *cmbbuf)
 {
 	uint8_t cmd[] = {
 		0xFE,
@@ -1102,6 +1105,10 @@ void zllSocSysGetExtAddr()
 	calcFcs(cmd, sizeof(cmd));
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1114,7 +1121,7 @@ void zllSocSysGetExtAddr()
  *
  * @return  none
  */
-void zllSocSysRamRead(uint16_t addr, uint8_t len)
+uint32_t zllSocSysRamRead(uint8_t *cmbbuf, uint16_t addr, uint8_t len)
 {
 	uint8_t cmd[] = {
 		0xFE,
@@ -1130,6 +1137,10 @@ void zllSocSysRamRead(uint16_t addr, uint8_t len)
 	calcFcs(cmd, sizeof(cmd));
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1143,7 +1154,7 @@ void zllSocSysRamRead(uint16_t addr, uint8_t len)
  *
  * @return  none
  */
-void zllSocSysRamWrite(uint16_t addr, uint8_t len, uint8_t *value)
+uint32_t zllSocSysRamWrite(uint8_t *cmbbuf, uint16_t addr, uint8_t len, uint8_t *value)
 {
 	uint8_t cmd[ZLL_CMD_BUF_SIZ];
 	uint8_t i=0;
@@ -1163,6 +1174,10 @@ void zllSocSysRamWrite(uint16_t addr, uint8_t len, uint8_t *value)
 	calcFcs(cmd, len+7);
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1178,7 +1193,7 @@ void zllSocSysRamWrite(uint16_t addr, uint8_t len, uint8_t *value)
  *
  * @return  none
  */
-void zllSocSysNvInit(uint16_t itemId, uint16_t itemLen, uint8_t initLen, uint8_t *initData)
+uint32_t zllSocSysNvInit(uint8_t *cmbbuf, uint16_t itemId, uint16_t itemLen, uint8_t initLen, uint8_t *initData)
 {
 	uint8_t cmd[ZLL_CMD_BUF_SIZ];
 	uint8_t i=0;
@@ -1201,6 +1216,10 @@ void zllSocSysNvInit(uint16_t itemId, uint16_t itemLen, uint8_t initLen, uint8_t
 	calcFcs(cmd, initLen+9);
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1213,7 +1232,7 @@ void zllSocSysNvInit(uint16_t itemId, uint16_t itemLen, uint8_t initLen, uint8_t
  *
  * @return  none
  */
-void zllSocSysNVRead(uint16_t itemId, uint8_t offset)
+uint32_t zllSocSysNVRead(uint8_t *cmbbuf, uint16_t itemId, uint8_t offset)
 {
 	uint8_t cmd[] = {
 		0xFE,
@@ -1229,6 +1248,10 @@ void zllSocSysNVRead(uint16_t itemId, uint8_t offset)
 	calcFcs(cmd, sizeof(cmd));
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1243,7 +1266,7 @@ void zllSocSysNVRead(uint16_t itemId, uint8_t offset)
  *
  * @return  none
  */
-void zllSocSysNvWrite(uint16_t itemId, uint8_t offset, uint8_t len, uint8_t *value)
+uint32_t zllSocSysNvWrite(uint8_t *cmbbuf, uint16_t itemId, uint8_t offset, uint8_t len, uint8_t *value)
 {
 	uint8_t cmd[ZLL_CMD_BUF_SIZ];
 	uint8_t i=0;
@@ -1264,6 +1287,10 @@ void zllSocSysNvWrite(uint16_t itemId, uint8_t offset, uint8_t len, uint8_t *val
 	calcFcs(cmd, len+8);
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1276,7 +1303,7 @@ void zllSocSysNvWrite(uint16_t itemId, uint8_t offset, uint8_t len, uint8_t *val
  *
  * @return  none
  */
-void zllSocSysNVDelete(uint16_t itemId, uint16_t itemLen)
+uint32_t zllSocSysNVDelete(uint8_t *cmbbuf, uint16_t itemId, uint16_t itemLen)
 {
 	uint8_t cmd[] = {
 		0xFE,
@@ -1293,6 +1320,10 @@ void zllSocSysNVDelete(uint16_t itemId, uint16_t itemLen)
 	calcFcs(cmd, sizeof(cmd));
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1304,7 +1335,7 @@ void zllSocSysNVDelete(uint16_t itemId, uint16_t itemLen)
  *
  * @return  none
  */
-void zllSocSysNVLength(uint16_t itemId)
+uint32_t zllSocSysNVLength(uint8_t *cmbbuf, uint16_t itemId)
 {
 	uint8_t cmd[] = {
 		0xFE,
@@ -1319,6 +1350,10 @@ void zllSocSysNVLength(uint16_t itemId)
 	calcFcs(cmd, sizeof(cmd));
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1330,7 +1365,7 @@ void zllSocSysNVLength(uint16_t itemId)
  *
  * @return  none
  */
-void zllSocSysSetTxPower(uint8_t power)
+uint32_t zllSocSysSetTxPower(uint8_t *cmbbuf, uint8_t power)
 {
 	uint8_t cmd[] = {
 		0xFE,
@@ -1344,6 +1379,10 @@ void zllSocSysSetTxPower(uint8_t power)
 	calcFcs(cmd, sizeof(cmd));
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*********************************************************************
@@ -1355,7 +1394,7 @@ void zllSocSysSetTxPower(uint8_t power)
  *
  * @return  none
  */
-void zllSocUtilGetDevInfo()
+uint32_t zllSocUtilGetDevInfo(uint8_t *cmbbuf)
 {
 	uint8_t cmd[] = {
 		0xFE,
@@ -1368,6 +1407,10 @@ void zllSocUtilGetDevInfo()
 	calcFcs(cmd, sizeof(cmd));
 
 	zllctrl_write(0, cmd, sizeof(cmd));
+
+    if(cmbbuf)
+      memcpy(cmbbuf, cmd, sizeof(cmd));
+    return sizeof(cmd);
 }
 
 /*************************************************************************************************
@@ -1393,10 +1436,7 @@ static void processRpcSysAppTlInd(uint8_t *TlIndBuff)
   epInfo.version = *TlIndBuff++;
   epInfo.status = *TlIndBuff++;
   
-  if(zllSocCb.pfnTlIndicationCb)
-  {
-    zllSocCb.pfnTlIndicationCb(&epInfo);
-  }    
+  tlIndicationCb(&epInfo);
 }        
 
 /*************************************************************************************************
@@ -1430,10 +1470,7 @@ static void processRpcSysAppNewDevInd(uint8_t *TlIndBuff)
   }
   
   uprintf_default("processRpcSysAppNewDevInd: %x:%x\n",  epInfo.nwkAddr, epInfo.endpoint);
-  if(zllSocCb.pfnNewDevIndicationCb)
-  {
-    zllSocCb.pfnNewDevIndicationCb(&epInfo);
-  }    
+  newDevIndicationCb(&epInfo);
 }
 
 /*************************************************************************************************
@@ -1513,50 +1550,38 @@ static void processRpcSysAppZclFoundation(uint8_t *zclRspBuff, uint8_t zclFrameL
     dataType = *zclRspBuff++;
 
 
-    uprintf_default("processRpcSysAppZclFoundation: clusterID:%x, attrID:%x, dataType=%x\n", clusterID, attrID, dataType);
+    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysAppZclFoundation: clusterID:%x, attrID:%x, dataType=%x\n", clusterID, attrID, dataType);
     
     if( (clusterID == ZCL_CLUSTER_ID_GEN_ON_OFF) && (attrID == ATTRID_ON_OFF) && (dataType == ZCL_DATATYPE_BOOLEAN) )
     {              
-      if(zllSocCb.pfnZclGetStateCb)
-      {
-        uint8_t state = zclRspBuff[0];            
-        zllSocCb.pfnZclGetStateCb(state, nwkAddr, endpoint);
-      }                       
+        uint8_t state = zclRspBuff[0];
+        zllctrl_set_light_on_off(nwkAddr, endpoint, state);
     }
     else if( (clusterID == ZCL_CLUSTER_ID_GEN_LEVEL_CONTROL) && (attrID == ATTRID_LEVEL_CURRENT_LEVEL) && (dataType == ZCL_DATATYPE_UINT8) )
     {    
-      if(zllSocCb.pfnZclGetLevelCb)
-      {
-        uint8_t level = zclRspBuff[0];                             
-        zllSocCb.pfnZclGetLevelCb(level, nwkAddr, endpoint);
-      }                       
+        uint8_t level = zclRspBuff[0];
+        zllctrl_set_light_level(nwkAddr, endpoint, level);
     }
     else if( (clusterID == ZCL_CLUSTER_ID_LIGHTING_COLOR_CONTROL) && (attrID == ATTRID_LIGHTING_COLOR_CONTROL_CURRENT_HUE) && (dataType == ZCL_DATATYPE_UINT8) )
     {
-      if(zllSocCb.pfnZclGetHueCb)      
-      {
-        uint8_t hue = zclRspBuff[0];            
-        zllSocCb.pfnZclGetHueCb(hue, nwkAddr, endpoint);
-      }    
-    }                   
+        uint8_t hue = zclRspBuff[0];
+        zllctrl_set_light_hue(nwkAddr, endpoint, hue);
+    }
     else if( (clusterID == ZCL_CLUSTER_ID_LIGHTING_COLOR_CONTROL) && (attrID == ATTRID_LIGHTING_COLOR_CONTROL_CURRENT_SATURATION) && (dataType == ZCL_DATATYPE_UINT8) )
     {
-      if(zllSocCb.pfnZclGetSatCb)      
-      {
-        uint8_t sat = zclRspBuff[0];            
-        zllSocCb.pfnZclGetSatCb(sat, nwkAddr, endpoint);
-      }    
+        uint8_t sat = zclRspBuff[0];
+        zllctrl_set_light_sat(nwkAddr, endpoint, sat);
     }
     else                
     {
       //unsupported ZCL Read Rsp
-      uprintf_default("processRpcSysAppZclFoundation: Unsupported ZCL Rsp\n");
+      uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysAppZclFoundation: Unsupported ZCL Rsp\n");
     } 
   }
   else
   {
     //unsupported ZCL Rsp
-    uprintf_default("processRpcSysAppZclFoundation: Unsupported ZCL Rsp");;
+    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysAppZclFoundation: Unsupported ZCL Rsp");
   }
   
   return;                    
@@ -1589,16 +1614,16 @@ static void processRpcSysApp(uint8_t *rpcBuff)
   {
     if( rpcBuff[2] == 0)
     {
-      uprintf_default("processRpcSysApp: Command Received Successfully\n\n");
+      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysApp: Command Received Successfully\n\n");
     }
     else
     {
-      uprintf_default("processRpcSysApp: Command Error\n\n");
+      uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysApp: Command Error\n\n");
     }    
   }
   else
   {
-    uprintf_default("processRpcSysApp: Unsupported MT App Msg\n");
+    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysApp: Unsupported MT App Msg\n");
   }
     
   return;   
@@ -1618,22 +1643,22 @@ static void processRpcSysDbg(uint8_t *rpcBuff)
   if( rpcBuff[1] == MT_DEBUG_MSG )
   {
     //we got a debug string
-    uprintf_default("lcd_debug message from zll controller: %s\n", (char*) &(rpcBuff[2]));
+    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "ZLL debug: %s\n", (char*) &(rpcBuff[2]));
   }              
   else if( rpcBuff[1] == 0 )
   {
     if( rpcBuff[2] == 0)
     {
-      uprintf_default("processRpcSysDbg: Command Received Successfully\n\n");
+      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysDbg: Command Received Successfully\n\n");
     }
     else
     {
-      uprintf_default("processRpcSysDbg: Command Error\n\n");
+      uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysDbg: Command Error\n\n");
     }    
   }
   else
   {
-    uprintf_default("processRpcSysDbg: Unsupported MT App Msg\n");
+    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysDbg: Unsupported MT App Msg\n");
   }
 }
 
@@ -1644,17 +1669,72 @@ static void processRpcSysZdo(uint8_t *rpcBuff)
   uint8_t startIdx;
 	
   // rpcBuff[1]: cmd1
-  if(rpcBuff[1] == MT_CMD_ZDO_DEVICE_ANNCE_IND) 
+  if(rpcBuff[1] == MT_ZDO_END_DEVICE_ANNCE_IND) 
   {
   	addr = *(uint16_t *)&rpcBuff[4];
-  	uprintf_default("processRpcSysZDO: device announce ind, nwkAddr=0x%x\n", addr);
+  	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: device announce ind, nwkAddr=0x%x\n", addr);
   }
-  else if(rpcBuff[1] == MT_CMD_ZDO_IEEE_ADDR_RSP)
+  else if(rpcBuff[1] == MT_ZDO_IEEE_ADDR_RSP)
   {
   	uint8_t status = rpcBuff[2];
 	uint16_t addr = *(uint16_t *)&rpcBuff[11];
 	uint8_t startIdx = rpcBuff[12];
-  	uprintf_default("processRpcSysZDO: IEEE addr rsp, status=%d nwkAddr=0x%x startIdx=%d\n", status, addr, startIdx);
+  	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: IEEE addr rsp, status=%d nwkAddr=0x%x startIdx=%d\n", status, addr, startIdx);
+  }
+}
+
+static void processRpcSysSys(uint8_t *rpcBuff)
+{
+  uint8_t status;
+  uint16_t addr;
+  uint8_t startIdx;
+  hue_t *hue = zllctrl_get_hue();
+	
+  // rpcBuff[1]: cmd1
+  if(rpcBuff[1] == MT_SYS_PING) 
+  {
+    uint16_t Capabilities = *(uint16_t *)&rpcBuff[2];
+  	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysSys: ping successful\n", Capabilities);
+  }
+  else if(rpcBuff[1] == MT_SYS_VERSION)
+  {
+  	hue->transport_rev = hue->socbuf[MT_RPC_POS_DAT0];
+    hue->product_id = hue->socbuf[MT_RPC_POS_DAT0+1];
+    hue->major_rel = hue->socbuf[MT_RPC_POS_DAT0+2];
+    hue->minor_rel = hue->socbuf[MT_RPC_POS_DAT0+3];
+    hue->maint_rel = hue->socbuf[MT_RPC_POS_DAT0+4];
+    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "trans_rev=%d prod_id=%d version=%d.%d.%d\n",
+            hue->transport_rev, hue->product_id,
+            hue->major_rel, hue->minor_rel, hue->maint_rel);
+  }
+  else
+  {
+    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysZDO: unknown cmd1=0x%x\n", rpcBuff[1]);
+  }
+}
+
+static void processRpcSysUtil(uint8_t *rpcBuff)
+{
+  uint8_t status;
+  uint16_t addr;
+  uint8_t startIdx;
+  hue_t *hue = zllctrl_get_hue();
+	
+  // rpcBuff[1]: cmd1
+  if(rpcBuff[1] == MT_UTIL_GET_DEVICE_INFO)
+  {
+  	memcpy(hue->ieee_addr, &hue->socbuf[MT_RPC_POS_DAT0+1], 8);
+    memcpy(&hue->short_addr, &hue->socbuf[MT_RPC_POS_DAT0+9], 2);
+    hue->device_type = hue->socbuf[MT_RPC_POS_DAT0+11];
+    hue->device_state = hue->socbuf[MT_RPC_POS_DAT0+12];
+    hue->num_assoc_dev = hue->socbuf[MT_RPC_POS_DAT0+13];
+    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "ieee_addr=%08x%08x short_addr=%d dev_type=0x%x dev_state=0x%x num_assoc_dev=%d\n",
+            *(uint32_t *)&hue->ieee_addr[0], *(uint32_t *)&hue->ieee_addr[4], hue->short_addr,
+            hue->device_type, hue->device_state, hue->num_assoc_dev);
+  }
+  else
+  {
+    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysUtil: unknown cmd1=0x%x\n", rpcBuff[1]);
   }
 }
 
@@ -1676,7 +1756,7 @@ void zllSocProcessRpc (uint8_t *rpcBuff, uint16_t length)
   rpcLen = rpcBuff[1];
   if ( (sofByte == MT_RPC_SOF) && (length == rpcLen+4))
   {         
-      uprintf_default("zllSocProcessRpc: Processing CMD0:%x, CMD1:%x\n", rpcBuff[2], rpcBuff[3] );
+      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "zllSocProcessRpc: Processing CMD0:%x, CMD1:%x\n", rpcBuff[2], rpcBuff[3] );
       //Read CMD0
       switch (rpcBuff[2] & MT_RPC_SUBSYSTEM_MASK) 
       {
@@ -1695,9 +1775,19 @@ void zllSocProcessRpc (uint8_t *rpcBuff, uint16_t length)
 		  processRpcSysZdo(&rpcBuff[2]);
 		  break;
 		}
+        case MT_RPC_SYS_SYS:
+        {
+          processRpcSysSys(&rpcBuff[2]);
+		  break;
+        }
+        case MT_RPC_SYS_UTIL:
+        {
+          processRpcSysUtil(&rpcBuff[2]);
+		  break;
+        }
         default:
         {
-          uprintf_default("zllSocProcessRpc: CMD0:%x, CMD1:%x, not handled\n", rpcBuff[2], rpcBuff[3] );
+          uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "zllSocProcessRpc: CMD0:%x, CMD1:%x, not handled\n", rpcBuff[2], rpcBuff[3] );
           break;
         }
       }
@@ -1705,8 +1795,8 @@ void zllSocProcessRpc (uint8_t *rpcBuff, uint16_t length)
   }
   else
   {
-      uprintf_default("zllSocProcessRpc: No valid Start Of Frame found, header=0x%08x length=%d\n", 
-	  	*(uint32_t *)rpcBuff, length);
+      uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "zllSocProcessRpc: No valid Start Of Frame found, header=0x%08x length=%d\n", 
+	  	    *(uint32_t *)rpcBuff, length);
   }
   
   return; 

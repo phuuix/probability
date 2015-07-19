@@ -63,6 +63,9 @@ void lwip_sys_init(void)
   struct ip_addr ipaddr;
   struct ip_addr netmask;
   struct ip_addr gw;
+
+  uprintf_set_enable(UPRINT_INFO, UPRINT_BLK_NET, 1);
+  uprintf_set_enable(UPRINT_DEBUG, UPRINT_BLK_NET, 1);
   
   /* Create tcp_ip stack thread */
   tcpip_init( NULL, NULL );	
@@ -79,6 +82,8 @@ void lwip_sys_init(void)
   IP4_ADDR(&ipaddr, IP_ADDR0, IP_ADDR1, IP_ADDR2, IP_ADDR3);
   IP4_ADDR(&netmask, NETMASK_ADDR0, NETMASK_ADDR1 , NETMASK_ADDR2, NETMASK_ADDR3);
   IP4_ADDR(&gw, GW_ADDR0, GW_ADDR1, GW_ADDR2, GW_ADDR3);
+
+  uprintf(UPRINT_INFO, UPRINT_BLK_NET, "LWIP eth0 IP: %d.%d.%d.%d\n", IP_ADDR0, IP_ADDR1, IP_ADDR2, IP_ADDR3);
 #endif
 
   /* - netif_add(struct netif *netif, struct ip_addr *ipaddr,
@@ -105,8 +110,6 @@ void lwip_sys_init(void)
   /* attach ethernet isr */
   bsp_isr_attach(16+ETH_IRQn, ethernetif_isr);
   bsp_irq_unmask(16+ETH_IRQn);
-
-  uprintf_set_enable(UPRINT_INFO, UPRINT_BLK_NET, 1);
 }
 
 void lwip_dhcp_start(void *pParameter)

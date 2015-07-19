@@ -36,6 +36,7 @@
 /* Exported constants --------------------------------------------------------*/
 #define DP83848_PHY_ADDRESS       0x01 /* Relative to STM322xG-EVAL Board */
 #define LAN8720_PHY_ADDRESS       0x00
+#define PHY_ADDRESS 0x14 // 0x05
 
 /* Specific defines for EXTI line, used to manage Ethernet link status */
 #define ETH_LINK_EXTI_LINE             EXTI_Line14

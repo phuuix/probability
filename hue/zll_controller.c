@@ -1,39 +1,7 @@
 /*
  * zll_controller.c
  *
- * This module demonstrates how to use the API for the zll SoC 
- * Host Interface.
- *
- * Copyright (C) 2013 Texas Instruments Incorporated - http://www.ti.com/ 
- * 
- * 
- *  Redistribution and use in source and binary forms, with or without 
- *  modification, are permitted provided that the following conditions 
- *  are met:
- *
- *    Redistributions of source code must retain the above copyright 
- *    notice, this list of conditions and the following disclaimer.
- *
- *    Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the 
- *    documentation and/or other materials provided with the   
- *    distribution.
- *
- *    Neither the name of Texas Instruments Incorporated nor the names of
- *    its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
- *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
- *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
- *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * A stateless ZLL controller
  *
  */
 #include <string.h>
@@ -43,6 +11,20 @@
 #include "zllSocCmd.h"
 #include "uprintf.h"
 
+mbox_t g_hue_mbox;
+mbox_t g_zll_mbox;
+
+hue_t g_hue;
+ptimer_table_t g_zll_timer_table;
+
+
+static hue_mail_t hue_mbox_data[HUE_MBOX_SIZE];
+static zll_mail_t zll_mbox_data[ZLL_MBOX_SIZE];
+
+
+
+static char zll_task_stack[TZLL_STACK_SIZE];
+
 #define MAX_CONSOLE_CMD_LEN 128
 
 void commandUsage( void );
@@ -51,19 +33,11 @@ void getConsoleCommandParams(char* cmdBuff, uint16_t *nwkAddr, uint8_t *addrMode
 uint32_t getParam( char *cmdBuff, char *paramId, uint32_t *paramInt);
 uint8_t tlIndicationCb(epInfo_t *epInfo);
 uint8_t newDevIndicationCb(epInfo_t *epInfo);
-uint8_t zclGetStateCb(uint8_t state, uint16_t nwkAddr, uint8_t endpoint);
-uint8_t zclGetLevelCb(uint8_t level, uint16_t nwkAddr, uint8_t endpoint);
-uint8_t zclGetHueCb(uint8_t hue, uint16_t nwkAddr, uint8_t endpoint);
-uint8_t zclGetSatCb(uint8_t sat, uint16_t nwkAddr, uint8_t endpoint);
 
 static zllSocCallbacks_t zllSocCbs =
 {
   tlIndicationCb,        // pfnTlIndicationCb - TouchLink Indication callback
   newDevIndicationCb,  // pfnNewDevIndicationCb - New Device Indication callback
-  zclGetStateCb,         // pfnZclGetHueCb - ZCL response callback for get Hue
-  zclGetLevelCb,         //pfnZclGetSatCb - ZCL response callback for get Sat
-  zclGetHueCb,           //pfnZclGetLevelCb_t - ZCL response callback for get Level
-  zclGetSatCb           //pfnZclGetStateCb - ZCL response callback for get State
 };
 
 static uint16_t savedNwkAddr;    
@@ -120,9 +94,7 @@ void commandUsage( void )
 }
 
 int zllctrl_init()
-{    
-  zllSocRegisterCallbacks( zllSocCbs );
-  
+{  
   //set some default values
   savedNwkAddr = 0x0002;    
   savedAddrMode = 0x02;    
@@ -169,7 +141,7 @@ void processConsoleCommand( char *cmdBuff )
   }
   else if((strstr(cmdBuff, "open")) != 0)
   {      
-    zllSocOpenNwk(60);
+    zllSocOpenNwk();
     uprintf_default("zllSocOpenNwk command executed\n\n");
   }         
   else if((strstr(cmdBuff, "setstate")) != 0)
@@ -374,29 +346,302 @@ uint8_t newDevIndicationCb(epInfo_t *epInfo)
   return 0;
 }
 
-uint8_t zclGetStateCb(uint8_t state, uint16_t nwkAddr, uint8_t endpoint)
+uint32_t zllctrl_process_json_message(hue_t *hue, uint8_t *data, uint16_t length)
 {
-  uprintf_default("\nzclGetStateCb:\n    Network Addr : 0x%04x\n    End Point    : 0x%02x\n    State        : 0x%02x\n\n", 
-    nwkAddr, endpoint, state); 
-  return 0;  
+    return 0;
 }
 
-uint8_t zclGetLevelCb(uint8_t level, uint16_t nwkAddr, uint8_t endpoint)
+static uint32_t zllctrl_mainloop(hue_t *hue)
 {
-  uprintf_default("\nzclGetLevelCb:\n    Network Addr : 0x%04x\n    End Point    : 0x%02x\n    Level        : %02x\n\n", 
-    nwkAddr, endpoint, level); 
-  return 0;  
+    hue_mail_t huemail;
+    int ret;
+    uint32_t t1, t2;
+
+    t1 = tick();
+    /* after network is established, begin event loop */
+    while(1)
+    {
+        /* process timers */
+        t2 = tick();
+        if(t2 > t1)
+        {
+            ptimer_consume_time(g_zll_timer_table, t2-t1);
+            t1 = t2;
+        }
+
+        /* wait for new message to processing */
+        ret = mbox_pend(&g_hue_mbox, &huemail, 0);
+        if(ret == ROK)
+        {
+            if(huemail.event == ZLL_EVENT_JSON)
+            {
+                /* process requests from hue */
+                zllctrl_process_json_message(hue, huemail.data, huemail.length);
+            }
+            else if(huemail.event == ZLL_EVENT_CONSOLE)
+            {
+                /* process requests from console */
+                processConsoleCommand(hue->cmb_buf);
+            }
+        }
+
+        /* wait for response and indication from soc */
+        ret = mbox_pend(&g_zll_mbox, &huemail, 2);
+        if(ret == ROK)
+        {
+            if(huemail.event == ZLL_EVENT_SOC)
+            {
+                /* process messages from zigbee device */
+                zllctrl_process_soc_message(hue, huemail.data, huemail.length);
+            }
+            else
+            {
+                /* invalid event */
+                uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "invalide event: %d\n", huemail.event);
+            }
+        }
+    }
+
+    return 0;
 }
 
-uint8_t zclGetHueCb(uint8_t hue, uint16_t nwkAddr, uint8_t endpoint)
+hue_light_t *zllctrl_find_light(uint16_t nwkAddr, uint8_t endpoint)
 {
-  uprintf_default("\nzclGetHueCb:\n    Network Addr : 0x%04x\n    End Point    : 0x%02x\n    Hue          : %02x\n\n", nwkAddr, endpoint, hue); 
-  return 0;  
+    int i;
+    hue_light_t *light = NULL;
+
+    for(i=0; i<g_hue.light_num; i++)
+    {
+        if(g_hue->lights[i].zig_addr.network_addr == nwkAddr && g_hue->lights[i].zig_addr.endpoint == endpoint)
+        {
+            light = &g_hue->light[i];
+            break;
+        }
+    }
+
+    return light;
 }
 
-uint8_t zclGetSatCb(uint8_t sat, uint16_t nwkAddr, uint8_t endpoint)
+int zllctrl_set_light_sat(uint16_t nwkAddr, uint8_t endpoint, uint8_t sat)
 {
-  uprintf_default("\nzclGetSatCb:\n    Network Addr : 0x%04x\n    End Point    : 0x%02x\n    Saturation   : %02x\n\n", 
-    nwkAddr, endpoint, sat); 
-  return 0;  
+    hue_light_t *light;
+
+    light = (hue_light_t *)zllctrl_find_light(nwkAddr, endpoint);
+    if(light)
+    {
+         uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "Network Addr: 0x%04x End Point: 0x%02x Saturation: %02x\n", 
+                nwkAddr, endpoint, sat); 
+        light->sat = sat;
+    }
+
+    return 0;
 }
+
+
+int zllctrl_set_light_hue(uint16_t nwkAddr, uint8_t endpoint, uint8_t hue)
+{
+    hue_light_t *light;
+
+    light = (hue_light_t *)zllctrl_find_light(nwkAddr, endpoint);
+    if(light)
+    {
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "Network Addr: 0x%04x End Point: 0x%02x Hue: %02x\n", 
+                nwkAddr, endpoint, hue); 
+        light->hue = hue;
+    }
+
+    return 0;
+}
+
+
+int zllctrl_set_light_level(uint16_t nwkAddr, uint8_t endpoint, uint8_t level)
+{
+    hue_light_t *light;
+
+    light = (hue_light_t *)zllctrl_find_light(nwkAddr, endpoint);
+    if(light)
+    {
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "Network Addr: 0x%04x End Point: 0x%02x brightless: %02x\n", 
+                nwkAddr, endpoint, level); 
+        light->bri = level;
+    }
+
+    return 0;
+}
+
+
+int zllctrl_set_light_on_off(uint16_t nwkAddr, uint8_t endpoint, uint8_t state)
+{
+    hue_light_t *light;
+
+    light = (hue_light_t *)zllctrl_find_light(nwkAddr, endpoint);
+    if(light)
+    {
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "Network Addr: 0x%04x End Point: 0x%02x on: %02x\n", 
+                nwkAddr, endpoint, state); 
+        light->on = state;
+    }
+
+    return 0;
+}
+
+int zllctrl_process_soc_message(hue_t *hue, uint8_t *data, uint16_t length)
+{
+    zllSocProcessRpc(data, length);
+
+    return 0;
+}
+
+uint32_t zllctrl_start_soc_eventloop(uint32_t deadline, hue_t *hue, uint32_t (*endfunc)())
+{
+    int retCode, endCode = RTIMEOUT;
+    int interval;
+	zll_mail_t zllmail;
+    uint32_t t1, t2;
+
+    t1 = tick();
+
+    interval = (deadline>0)?1:0;
+
+    do{
+        /* process messages from mbox */
+    	if(mbox_pend(&g_zll_mbox, &zllmail, interval) == ROK)
+    	{
+    		retCode = zllctrl_process_soc_message(hue, zllmail.data, zllmail.length);
+            if(endfunc)
+            {
+                endCode = endfunc(hue, zllmail.data, zllmail.length, retCode);
+                if(endCode != RTIMEOUT)
+                    break;
+            }
+    	}
+
+        /* process timers */
+        t2 = tick();
+        if(t2 > t1)
+        {
+            ptimer_consume_time(g_zll_timer_table, t2-t1);
+            t1 = t2;
+        }
+    }while(t2 <= deadline);
+    
+	return endCode;
+}
+
+/* establish the connection to soc */
+uint32_t zllctrl_connect_to_soc(hue_t *hue)
+{
+	uint32_t ret;
+	
+	/* get sys version */
+	zllSocSysVersion(NULL);
+    ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, uint32_t(* endfunc)());
+    if(ret == RTIMEOUT)
+    {
+        uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "can't get sysversion: %d\n", ret);
+        return ret;
+    }
+
+	/* get device info */
+	zllSocUtilGetDevInfo(NULL);
+    ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, uint32_t(* endfunc)());
+    if(ret == RTIMEOUT)
+    {
+        uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "can't get device info\n");
+        return ret;
+    }
+
+    return ret;
+}
+
+uint32_t zllctrl_network_setup(hue_t *hue)
+{
+    uint8_t status;
+	uint32_t ret;
+    
+
+    /* touch link: encapsulated in a app message */
+    zllSocTouchLink(NULL);
+    ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, NULL);
+    if(ret != ROK)
+    {
+        uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "can't touch link: %d\n", ret);
+        return ret;
+    }
+
+    /* permit join forever */
+    zllSocOpenNwk(NULL, 0xFF);
+    ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, NULL);
+    if(ret != ROK)
+    {
+        uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "can't permit join: %d\n", ret);
+        return ret;
+    }
+
+    return ret;
+}
+
+void zllctrl_set_state(hue_t *hue, uint32_t state)
+{
+    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "hue state 0x%x --> 0x%x\n", hue->state, state);
+    hue->state = state;
+}
+
+static void zllctrl_task(void *p)
+{
+	hue_t *hue;
+	uint32_t ret;
+    hue_mail_t huemail; 
+
+	hue = (hue_t *)p;
+	zllctrl_set_state(hue, HUE_STATE_INIT);
+	
+    /* create timer table */
+    ret = ptimer_init(&g_zll_timer_table, 16 /* nSlot */);
+    assert(ret == 0);
+
+	/* connect to Soc */
+	ret = zllctrl_connect_to_soc(hue);
+	if(ret != 0)
+	{
+		uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "failed to connect to cc2530 Soc: ret=%d\n", ret);
+		return;
+	}
+
+	zllctrl_set_state(hue, HUE_STATE_CONNECTED);
+	
+	/* setup network */
+    ret = zllctrl_network_setup(hue);
+    if(ret != 0)
+	{
+		uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "failed to establish network: ret=%d\n", ret);
+		return;
+	}
+
+    zllctrl_set_state(hue, HUE_STATE_NETSETUP);
+
+	zllctrl_mainloop(hue);
+}
+
+
+int zllctrl_init()
+{
+	/* create a zllhue task */
+	task_t t;
+
+	//set some default values for console
+	savedNwkAddr = 0x0002;
+	savedAddrMode = 0x02;	 
+	savedEp = 0x0b;    
+	savedValue = 0x0;	 
+	savedTransitionTime = 0x1;
+
+	mbox_initialize(&g_hue_mbox, sizeof(struct hue_mail_t)/sizeof(int), HUE_MBOX_SIZE, hue_mbox_data);
+    mbox_initialize(&g_zll_mbox, sizeof(struct zll_mail_t)/sizeof(int), ZLL_MBOX_SIZE, zll_mbox_data);
+
+	t = task_create("tzll", zllctrl_task, &g_hue, zll_task_stack, TZLL_STACK_SIZE, TZLL_PRIORITY, 20, 0);
+	assert(t != RERROR);
+	task_resume_noschedule(t);
+	return 0;
+}
+

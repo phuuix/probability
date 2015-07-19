@@ -3,7 +3,8 @@
  */
 #include <stdio.h>
 #include <string.h>
-
+#include "siprintf.h"
+#include "hue.h"
 #include "cJSON.h"
 #include "hue_json_builder.h"
 
@@ -11,6 +12,11 @@
 
 const static char *strHueSuccess = "success";
 const static char *strHueFailure = "failure";
+const static char *strHueAlert[] = {"none", "select", "lselect"};
+const static char *strHueEffect[] = {"none", "colorloop"};
+const static char *strHueColormode[] = {"hs", "xy", "ct"};
+//FIXME:   strHueType
+const static char *strHueType[] = {"Extended color light", "Living Colors"};   
 
 uint32_t json_build_char(char *out_buf, uint32_t in_len, char c)
 {
@@ -153,7 +159,7 @@ uint32_t hue_json_build_xy(char *out_buf, uint32_t in_len, uint16_t v)
 	return length;
 }
 
-uint32_t hue_json_build_light_state(char *out_buf, uint32_t in_len, hue_light *light)
+uint32_t hue_json_build_light_state(char *out_buf, uint32_t in_len, hue_light_t *light)
 {
 	uint32_t offset = 0;
 	
@@ -251,19 +257,19 @@ uint32_t hue_json_build_light(char *out_buf, uint32_t in_len, hue_light_t *light
 	// build name
 	offset += json_build_string(&out_buf[offset], in_len-offset, "name");
 	offset += json_build_char(&out_buf[offset], in_len-offset, ':');
-	offset += json_build_string(&out_buf[offset], in_len-offset, light->name);
+	offset += json_build_string(&out_buf[offset], in_len-offset, (const char *)light->name);
 	offset += json_build_char(&out_buf[offset], in_len-offset, ',');
 
 	// build modelid
 	offset += json_build_string(&out_buf[offset], in_len-offset, "modelid");
 	offset += json_build_char(&out_buf[offset], in_len-offset, ':');
-	offset += json_build_string(&out_buf[offset], in_len-offset, light->modelid);
+	offset += json_build_string(&out_buf[offset], in_len-offset, (const char *)light->modelId);
 	offset += json_build_char(&out_buf[offset], in_len-offset, ',');
 
 	// build swversion
 	offset += json_build_string(&out_buf[offset], in_len-offset, "swversion");
 	offset += json_build_char(&out_buf[offset], in_len-offset, ':');
-	offset += json_build_string(&out_buf[offset], in_len-offset, light->swversion);
+	offset += json_build_string(&out_buf[offset], in_len-offset, (const char *)light->swversion);
 	offset += json_build_char(&out_buf[offset], in_len-offset, ',');
 
 	// build pointsymbol
@@ -282,6 +288,7 @@ uint32_t hue_json_build_all_lights(char *out_buf, uint32_t in_len)
 {
 	uint16_t n;
 	uint32_t offset;
+	char idString[10];
 
 	offset = 0;
 	offset += json_build_object_start(&out_buf[offset], in_len-offset);
@@ -293,8 +300,9 @@ uint32_t hue_json_build_all_lights(char *out_buf, uint32_t in_len)
 			// build ','
 			offset += json_build_char(&out_buf[offset], in_len-offset, ',');
 		}
-		
-		offset += json_build_string(&out_buf[offset], in_len-offset, gHueLight[n].id);
+
+		siprintf(idString, 10, "%d", gHueLight[n].id);
+		offset += json_build_string(&out_buf[offset], in_len-offset, idString);
 
 		offset += json_build_char(&out_buf[offset], in_len-offset, ':');
 		
@@ -313,14 +321,14 @@ uint32_t hue_json_build_create_user(char *out_buf, uint32_t in_len, uint8_t succ
 	offset += json_build_array_start(&out_buf[offset], in_len-offset);
 	offset += json_build_object_start(&out_buf[offset], in_len-offset);
 
-	offset += json_build_string(out_buf, in_len-offset, success?strHueSuccess, strHueFailure);
+	offset += json_build_string(out_buf, in_len-offset, success?strHueSuccess:strHueFailure);
 	offset += json_build_char(out_buf, in_len-offset, ':');
 
 	// username object
 	offset += json_build_object_start(&out_buf[offset], in_len-offset);
 	offset += json_build_string(out_buf, in_len-offset, "username");
 	offset += json_build_char(out_buf, in_len-offset, ':');
-	offset += json_build_string(out_buf, in_len-offset, username);
+	offset += json_build_string(out_buf, in_len-offset, (const char *)username);
 	offset += json_build_object_end(&out_buf[offset], in_len-offset);
 		
 	offset += json_build_object_end(&out_buf[offset], in_len-offset);

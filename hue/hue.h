@@ -4,8 +4,19 @@
 #define _HUE_H_
 
 #include <inttypes.h>
+
+#define UPRINT_BLK_HUE 6
+
+typedef struct zigbee_addr
+{
+    uint16_t network_addr;
+    uint8_t endpoint;
+}zigbee_addr_t;
+
 typedef struct hue_light
 {
+    zigbee_addr_t zig_addr; // address of light
+
 	uint8_t id;
 	uint8_t on:1;			//On/Off state of the light
 	uint8_t reachable:1;	//Indicates if a light can be reached by the bridge.
@@ -60,7 +71,52 @@ typedef struct hue_user
 	uint32_t lastUseDate;
 }hue_user_t;
 
+enum
+{
+    HUE_STATE_INIT,
+    HUE_STATE_CONNECTED,               // connected to Soc
+    HUE_STATE_NETSETUP,                // network is setup
+};
+
+#define HUE_LIGHT_MAX_NUM 16
+
+typedef struct hue_s
+{
+	uint16_t state;
+
+    uint8_t transport_rev;              // transport protocol revision
+    uint8_t product_id;                 // Product Id
+    uint8_t major_rel;                  // Software major release number
+    uint8_t minor_rel;                  // Software minor release number
+    uint8_t maint_rel;                  // Software maintenance release number
+
+    uint8_t light_num;
+    hue_light_t lights[HUE_LIGHT_MAX_NUM];
+
+    uint8_t socbuf[];
+}hue_t;
+
+typedef struct hue_mail_s
+{
+	uint8_t event;
+    uint8_t flags;
+    uint16_t length;
+	uint8_t *data;
+}hue_mail_t;
+
+typedef struct zll_mail_s
+{
+	uint8_t event;
+    uint8_t flags;
+    uint16_t length;
+	uint8_t *data;
+}zll_mail_t;
+
 #define HUE_MAX_USERS 8
 #define HUE_MAX_LIGHTS 32
 
+extern hue_light_t gHueLight[HUE_MAX_LIGHTS];
+extern hue_user_t gHueUser[HUE_MAX_USERS];
+extern uint16_t gNumHueLight;
+extern uint16_t gNumHueUser;
 #endif //_HUE_H_

@@ -62,23 +62,6 @@ typedef struct
   uint8_t status;
 } epInfo_t;
 
-typedef uint8_t (*zllSocTlIndicationCb_t)(epInfo_t *epInfo);
-typedef uint8_t (*zllNewDevIndicationCb_t)(epInfo_t *epInfo);
-typedef uint8_t (*zllSocZclGetStateCb_t)(uint8_t state, uint16_t nwkAddr, uint8_t endpoint);
-typedef uint8_t (*zllSocZclGetLevelCb_t)(uint8_t level, uint16_t nwkAddr, uint8_t endpoint);
-typedef uint8_t (*zllSocZclGetHueCb_t)(uint8_t hue, uint16_t nwkAddr, uint8_t endpoint);
-typedef uint8_t (*zllSocZclGetSatCb_t)(uint8_t sat, uint16_t nwkAddr, uint8_t endpoint);
-
-typedef struct
-{
-  zllSocTlIndicationCb_t          pfnTlIndicationCb;      // TouchLink Indication callback
-  zllNewDevIndicationCb_t         pfnNewDevIndicationCb;  // New device Indication callback    
-  zllSocZclGetStateCb_t           pfnZclGetStateCb;       // ZCL response callback for get State
-  zllSocZclGetLevelCb_t           pfnZclGetLevelCb;     // ZCL response callback for get Level
-  zllSocZclGetHueCb_t             pfnZclGetHueCb;         // ZCL response callback for get Hue
-  zllSocZclGetSatCb_t             pfnZclGetSatCb;         // ZCL response callback for get Sat
-} zllSocCallbacks_t;
-
 #define Z_EXTADDR_LEN 8
 
 typedef enum
@@ -103,7 +86,7 @@ void zllSocProcessRpc (uint8_t *rpcBuff, uint16_t length);
 void zllSocTouchLink(void);
 void zllSocResetToFn(void);
 void zllSocSendResetToFn(void);
-void zllSocOpenNwk(uint8_t duration);
+void zllSocOpenNwk(void);
 //ZCL Set API's
 void zllSocSetState(uint8_t state, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
 void zllSocSetLevel(uint8_t level, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);

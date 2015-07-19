@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <strings.h>
 
 #include "http_parser.h"
 
@@ -40,6 +41,8 @@ char *strtoken(char **str, char separator)
 	return rstr;
 }
 
+// strip the leading characters which is in set of string c
+// ie http_strip_chars("aabbccdd", "ab") return 4 ("ccdd");
 int http_strip_chars(char *in_buf, char *c)
 {
 	int offset = 0;
@@ -48,7 +51,7 @@ int http_strip_chars(char *in_buf, char *c)
 	do{
 		delimiter = c;
 		while(*delimiter && in_buf[offset] != *delimiter)
-			*delimiter ++;
+			delimiter ++;
 		if(*delimiter) 
 			offset ++;
 	}while(*delimiter);
@@ -59,8 +62,7 @@ int http_strip_chars(char *in_buf, char *c)
 int http_parse_content_type(char *in_buf, uint16_t length)
 {
 	int offset = 0;
-	char *next_ptr = NULL;
-	int type = 0;
+	int type = HTTP_CONTENTTYPE_UNKNOW;
 
 	// strip leading blanks
 	offset = http_strip_chars(in_buf, " ");
@@ -68,8 +70,6 @@ int http_parse_content_type(char *in_buf, uint16_t length)
 	
 	if(strcmp(in_buf, HTTP_STR_CONTENT_TYPE_JSON) == 0)
 		type = HTTP_CONTENTTYPE_JSON;
-	else if(strcmp(in_buf, HTTP_STR_CONTENT_TYPE_APP) == 0)
-		type = HTTP_CONTENTTYPE_APP;
 	else if(strcmp(in_buf, HTTP_STR_CONTENT_TYPE_HTML) == 0)
 		type = HTTP_CONTENTTYPE_HTML;
 
@@ -78,6 +78,7 @@ int http_parse_content_type(char *in_buf, uint16_t length)
 
 /* parse HTTP request line
  * Request-Line = Method SP Request-URI SP HTTP-Version CRLF
+ * return: the offset to Content-Type
  */
 int http_parse_request_line(char *in_buf, uint16_t length, http_parser_t *parser)
 {
@@ -85,7 +86,7 @@ int http_parse_request_line(char *in_buf, uint16_t length, http_parser_t *parser
 	char *line=in_buf;
 	char *tmpptr;
 
-	// get the first token "Method"
+	// get the first token "Method", current support "get", "post" and "put"
 	tmpptr = strtoken(&line, ' ');
 	if(strcmp(tmpptr, HTTP_STR_GET) == 0)
 	{
@@ -186,6 +187,9 @@ int http_parse_request_body(char *in_buf, uint16_t length, http_parser_t *parser
 	{
 		parser->content = in_buf;
 	}
+	else
+		parser->content = NULL;
+	
 	return length;
 }
 
@@ -195,7 +199,6 @@ int http_parse_request_body(char *in_buf, uint16_t length, http_parser_t *parser
 int http_parse_request(char *in_buf, uint16_t length, http_parser_t *parser)
 {
 	int offset = 0;
-	char *ptr_body;
 	
 	/* parse request line */
 	offset  += http_parse_request_line(in_buf, length, parser);
@@ -246,7 +249,7 @@ int main(int argc, char *argv[])
 	char msgbuf[1000];
 	char *msgs[] = {
 		"GET / HTTP/1.1 \r\n",
-		"GET /api/whoru/lights HTTP/1.1 \r\nContent-Type: text/html\r\nContent-Length: 2\r\n\r\n{}",
+		"GET /api/whoru/lights HTTP/1.1 \r\n        Content-Type: text/html\r\nContent-Length: 2\r\n\r\n{}",
 		"GET /ntab.gif?c=ntab&t=timing&a=1-f-newssites&d=1297&f=&r=0.6531566826163131&cid=stub.firefox.others HTTP/1.1\r\n Host: addons.g-fox.cn\r\nConnection: keep-alive\r\n",
 		"POST /api/whoru/lights HTTP/1.1 \r\n Content-Type: application/json\r\n Content-Length: 50\r\n\r\n{\"deviceid\":[\"45AF34\",\"543636\",\"34AFBE\"]}",
 		"PUT /api/whoru/lights/1 HTTP/1.1 \r\n Content-Type: application/json\r\n Content-Length: 30\r\n\r\n{\"name\":\"Bedroom Light\"}",
@@ -263,7 +266,8 @@ int main(int argc, char *argv[])
 
 		http_parser_dump(&http_parser);
 	}
-	
+
+	return 0;
 }
 
 #endif

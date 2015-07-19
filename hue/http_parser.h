@@ -31,6 +31,7 @@ typedef unsigned int uint32_t;
 #define HTTP_REQTYPE_POST 2
 #define HTTP_REQTYPE_PUT 3
 
+#define HTTP_CONTENTTYPE_UNKNOW 0
 #define HTTP_CONTENTTYPE_JSON 1
 #define HTTP_CONTENTTYPE_HTML 2
 #define HTTP_CONTENTTYPE_APP 3

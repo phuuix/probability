@@ -18,7 +18,7 @@
   * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
   ******************************************************************************
   */
-/* Puhuix: 2014-10-06 change for PHY LAN8720 */
+/* Puhuix: 2015-06-13 change for PHY RTL8201 */
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f2x7_eth.h"
@@ -30,6 +30,7 @@
 #include "misc.h"
 
 
+extern void udelay(uint32_t us);
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -44,6 +45,24 @@ static void ETH_MACDMA_Config(void);
 
 /* Private functions ---------------------------------------------------------*/
 
+void eth_dump_phy_register()
+{
+	int i;
+
+	KPRINTF("RTL8021 registers: \n");
+	for(i=0; i<24; i+=4)
+	{
+		kprintf("%02d~%02d: 0x%08x 0x%08x 0x%08x 0x%08x\n", i, i+3, 
+					ETH_ReadPHYRegister(PHY_ADDRESS, i), 
+					ETH_ReadPHYRegister(PHY_ADDRESS, i+1),
+					ETH_ReadPHYRegister(PHY_ADDRESS, i+2),
+					ETH_ReadPHYRegister(PHY_ADDRESS, i+3));
+	}
+	kprintf("R24=0x%08x R25=0x%08x PE7=0x%08x\n", ETH_ReadPHYRegister(PHY_ADDRESS, 24), 
+			ETH_ReadPHYRegister(PHY_ADDRESS, 25),
+			GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_7)<<16 | GPIO_ReadOutputDataBit(GPIOE, GPIO_Pin_7));
+}
+
 /**
   * @brief  ETH_BSP_Config
   * @param  None
@@ -53,10 +72,13 @@ void ETH_BSP_Config(void)
 {
   /* Configure the GPIO ports for ethernet pins */
   ETH_GPIO_Config();
+
+  KPRINTF("after ETH_GPIO_Config:\n");
+  eth_dump_phy_register();
   
   /* Config NVIC for Ethernet */
   ETH_NVIC_Config();
-
+  
   /* Configure the Ethernet MAC/DMA */
   ETH_MACDMA_Config();
 
@@ -66,6 +88,8 @@ void ETH_BSP_Config(void)
 	return;
   }
 
+  KPRINTF("ETH MAC config finished\n");
+  eth_dump_phy_register();
 #if 0
   /* Below is not applycable to LAN8720
    * You may later rewrite Eth_Link_PHYITConfig() and Eth_Link_EXTIConfig() to capture link down event
@@ -78,6 +102,7 @@ void ETH_BSP_Config(void)
   Eth_Link_EXTIConfig();
 #endif
 }
+
 
 /**
   * @brief  Configures the Ethernet Interface
@@ -107,10 +132,13 @@ static void ETH_MACDMA_Config(void)
 
   /* Fill ETH_InitStructure parametrs */
   /*------------------------   MAC   -----------------------------------*/
+#if 1
   ETH_InitStructure.ETH_AutoNegotiation = ETH_AutoNegotiation_Enable;
-  //ETH_InitStructure.ETH_AutoNegotiation = ETH_AutoNegotiation_Disable; 
-  //  ETH_InitStructure.ETH_Speed = ETH_Speed_10M;
-  //  ETH_InitStructure.ETH_Mode = ETH_Mode_FullDuplex;   
+#else
+  ETH_InitStructure.ETH_AutoNegotiation = ETH_AutoNegotiation_Disable; 
+  ETH_InitStructure.ETH_Speed = ETH_Speed_10M;
+  ETH_InitStructure.ETH_Mode = ETH_Mode_FullDuplex;
+#endif
 
   ETH_InitStructure.ETH_LoopbackMode = ETH_LoopbackMode_Disable;
   ETH_InitStructure.ETH_RetryTransmission = ETH_RetryTransmission_Disable;
@@ -143,11 +171,10 @@ static void ETH_MACDMA_Config(void)
   ETH_InitStructure.ETH_DMAArbitration = ETH_DMAArbitration_RoundRobin_RxTx_2_1;
 
   /* Configure Ethernet */
-  EthInitStatus = ETH_Init(&ETH_InitStructure, LAN8720_PHY_ADDRESS);
-  kprintf("PHY register 0: 0x%x\n", ETH_ReadPHYRegister(0,0));
-  kprintf("PHY register 1: 0x%x\n", ETH_ReadPHYRegister(0,1));
-  kprintf("PHY register 31: 0x%x\n", ETH_ReadPHYRegister(0,31));
-
+  EthInitStatus = ETH_Init(&ETH_InitStructure, PHY_ADDRESS);
+  KPRINTF("After ETH_init: \n");
+  eth_dump_phy_register();
+  
   /* Enable the Ethernet Rx Interrupt */
   ETH_DMAITConfig(ETH_DMA_IT_NIS | ETH_DMA_IT_R, ENABLE);
 }
@@ -163,21 +190,14 @@ void ETH_GPIO_Config(void)
   int i;
 
   /* Enable GPIOs clocks */
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOC |
-                         RCC_AHB1Periph_GPIOG | RCC_AHB1Periph_GPIOH, ENABLE);
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB |
+                         RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOE, ENABLE);
 
   /* Enable SYSCFG clock */
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
- 
-  /*
-     * Things to check: PHYAD0 is driven high then PHYADDR will be 1?
-     * Refers: 
-     *   https://my.st.com/public/STe2ecommunities/mcu/Lists/cortex_mx_stm32/Flat.aspx?RootFolder=https%3a%2f%2fmy.st.com%2fpublic%2fSTe2ecommunities%2fmcu%2fLists%2fcortex_mx_stm32%2fHelp%20with%20Ethernet%20configuration&FolderCTID=0x01200200770978C69A1141439FE559EB459D7580009C4E14902C3CDE46A77F0FFD06506F5B&currentviews=436
-     */
-#if 0
-  /* Configure MCO (PA8)
-   * It seems MCO is unnecessary to config. Since LAN8720 pin XTAL1 isn't connected to MCO.
-   */
+     
+#if PHY_CLOCK_MCO
+  /* Configure MCO (PA8) */
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -200,37 +220,43 @@ void ETH_GPIO_Config(void)
 
   SYSCFG_ETH_MediaInterfaceConfig(SYSCFG_ETH_MediaInterface_RMII);
 #endif
-  
-/* Ethernet pins connection ************************************************/
-	/*
-	 * revised: PHY LAN8720 pin connection (by RMII)
-	--------------------------------------------
-	 ETH_MDIO -------------------> PA2
-	 ETH_MDC --------------------> PC1
-	 ETH_RMII_REF_CLK ------------> PA1
-	 ETH_RMII_CRS_DV ------------> PA7
-        ETH_MII_RX_ER ---------------> 
-	 ETH_RMII_RXD0 ---------------> PC4
-	 ETH_RMII_RXD1 ---------------> PC5
-	 ETH_RMII_TX_EN ---------- ----> PG11
-	 ETH_RMII_TXD0 --------------- > PG13
-	 ETH_RMII_TXD1 ----------------> PG14
-	 ETH_RST ----------------------> PH7
-	--------------------------------------------
-	*/
 
-  // Configure PH7 (RMII_nRST)
+/* Ethernet pins configuration 
+************************************************/
+   /*
+        ETH_MDIO -------------------------> PA2
+        ETH_MDC --------------------------> PC1
+        # ETH_PPS_OUT ----------------------> PB5
+        ETH_MII_CRS ----------------------> PA0
+        ETH_MII_COL ----------------------> PA3
+        ETH_MII_RX_ER --------------------> PB10
+        ETH_MII_RXD2 ---------------------> PB0
+        ETH_MII_RXD3 ---------------------> PB1
+        ETH_MII_TX_CLK -------------------> PC3
+        ETH_MII_TXD2 ---------------------> PC2
+        ETH_MII_TXD3 ---------------------> PB8
+        ETH_MII_RX_CLK/ETH_RMII_REF_CLK---> PA1
+        ETH_MII_RX_DV/ETH_RMII_CRS_DV ----> PA7
+        ETH_MII_RXD0/ETH_RMII_RXD0 -------> PC4
+        ETH_MII_RXD1/ETH_RMII_RXD1 -------> PC5
+        ETH_MII_TX_EN/ETH_RMII_TX_EN -----> PB11
+        ETH_MII_TXD0/ETH_RMII_TXD0 -------> PB12
+        ETH_MII_TXD1/ETH_RMII_TXD1 -------> PB13
+        RST_PHY --------------------------> PE7
+                                                  */
+
+  // Configure PE7 (RST_PHY)
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
-  GPIO_Init(GPIOH, &GPIO_InitStructure);
+  GPIO_Init(GPIOE, &GPIO_InitStructure);
   
-  /* reset phy */
-  GPIO_ResetBits(GPIOH, GPIO_Pin_7);
-  for (i = 0; i < 2000; i++);
-  GPIO_SetBits(GPIOH, GPIO_Pin_7);
+  /* reset phy: For a complete reset function, the reset pin must be asserted low for at least 10ms. */
+  GPIO_ResetBits(GPIOE, GPIO_Pin_7);
+  udelay(20000);
+  GPIO_SetBits(GPIOE, GPIO_Pin_7);
   for (i = 0; i < 2000; i++);
 
   // init GPIO structure
@@ -239,26 +265,35 @@ void ETH_GPIO_Config(void)
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   
-  /* Configure PA1, PA2 and PA7 */
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_7;
+  /* Configure PA0, PA1, PA2, PA3 and PA7 */
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_7;
   GPIO_Init(GPIOA, &GPIO_InitStructure);
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource0, GPIO_AF_ETH);
   GPIO_PinAFConfig(GPIOA, GPIO_PinSource1, GPIO_AF_ETH);
   GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_ETH);
+  GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_ETH);
   GPIO_PinAFConfig(GPIOA, GPIO_PinSource7, GPIO_AF_ETH);
 
-  /* Configure PC1, PC4 and PC5 */
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_4 | GPIO_Pin_5;
+  /* Configure PC1, PC2, PC3, PC4 and PC5 */
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5;
   GPIO_Init(GPIOC, &GPIO_InitStructure);
   GPIO_PinAFConfig(GPIOC, GPIO_PinSource1, GPIO_AF_ETH);
+  GPIO_PinAFConfig(GPIOC, GPIO_PinSource2, GPIO_AF_ETH);
+  GPIO_PinAFConfig(GPIOC, GPIO_PinSource3, GPIO_AF_ETH);
   GPIO_PinAFConfig(GPIOC, GPIO_PinSource4, GPIO_AF_ETH);
   GPIO_PinAFConfig(GPIOC, GPIO_PinSource5, GPIO_AF_ETH);
                                 
-  /* Configure PG11, PG14 and PG13 */
-  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_11 | GPIO_Pin_13 | GPIO_Pin_14;
-  GPIO_Init(GPIOG, &GPIO_InitStructure);
-  GPIO_PinAFConfig(GPIOG, GPIO_PinSource11, GPIO_AF_ETH);
-  GPIO_PinAFConfig(GPIOG, GPIO_PinSource13, GPIO_AF_ETH);
-  GPIO_PinAFConfig(GPIOG, GPIO_PinSource14, GPIO_AF_ETH);
+  /* Configure PB0, PB1, PB8, PB10, PB11, PB12 and PB13 */
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_8 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 | GPIO_Pin_13;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource0, GPIO_AF_ETH);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource1, GPIO_AF_ETH);
+  // GPIO_PinAFConfig(GPIOB, GPIO_PinSource5, GPIO_AF_ETH);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_ETH);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource10, GPIO_AF_ETH);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource11, GPIO_AF_ETH);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource12, GPIO_AF_ETH);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource13, GPIO_AF_ETH);
 }
 
 /**
