@@ -78,8 +78,7 @@ enum
     HUE_STATE_NETSETUP,                // network is setup
 };
 
-#define HUE_LIGHT_MAX_NUM 16
-
+#define SOC_MT_CMD_BUF_SIZ 256
 typedef struct hue_s
 {
 	uint16_t state;
@@ -90,10 +89,13 @@ typedef struct hue_s
     uint8_t minor_rel;                  // Software minor release number
     uint8_t maint_rel;                  // Software maintenance release number
 
-    uint8_t light_num;
-    hue_light_t lights[HUE_LIGHT_MAX_NUM];
-
-    uint8_t socbuf[];
+	uint8_t ieee_addr[8];
+	uint16_t short_addr;
+	uint8_t device_type;
+	uint8_t device_state;
+	uint8_t num_assoc_dev;
+	
+    uint8_t socbuf[SOC_MT_CMD_BUF_SIZ];    // store the MT response and indication
 }hue_t;
 
 typedef struct hue_mail_s

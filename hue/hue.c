@@ -26,7 +26,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "uprintf.h"
+#include "clock.h"
 #include "hue.h"
+#include "hue_json_builder.h"
 
 hue_light_t gHueLight[HUE_MAX_LIGHTS];
 hue_user_t gHueUser[HUE_MAX_USERS];
@@ -62,7 +65,6 @@ int process_hue_api_search_new_lights(char *responseBuf, uint32_t size)
 int process_hue_api_get_light_attr_state(char *responseBuf, uint32_t size, uint16_t light_id)
 {
 	hue_light_t *light;
-	int i;
 	
 	// TODO: find the light
 	
@@ -141,7 +143,7 @@ int process_hue_api_create_user(char *devType, char *userName, char *responseBuf
 	
 	for(i=0; i<gNumHueUser; i++)
 	{
-		if(strcmp(userName, gHueUser[i].name) == 0)
+		if(strcmp(userName, (const char *)gHueUser[i].name) == 0)
 		{
 			success = 1;
 			break;
@@ -152,7 +154,7 @@ int process_hue_api_create_user(char *devType, char *userName, char *responseBuf
 	{
 		//If the requested username already exists then the response will report a success.
 		uprintf_default("Hue user already existed: %s\n", userName);
-		return hue_json_build_create_user(responseBuf, size, success, userName);
+		return hue_json_build_create_user(responseBuf, size, success, (uint8_t *)userName);
 	}
 
 	if(gNumHueUser < HUE_MAX_USERS)
@@ -161,13 +163,13 @@ int process_hue_api_create_user(char *devType, char *userName, char *responseBuf
 		user = &gHueUser[gNumHueUser];
 		gNumHueUser ++;
 		user->id = gNumHueUser;
-		strncpy(user->devType, devType, 40);
-		strncpy(user->name, userName, 40);
+		strncpy((char *)user->devType, devType, 40);
+		strncpy((char *)user->name, userName, 40);
 		user->createDate = time(NULL);
 		user->lastUseDate = user->createDate;
 	}
 
-	return hue_json_build_create_user(responseBuf, size, success, userName);
+	return hue_json_build_create_user(responseBuf, size, success, (uint8_t *)userName);
 }
 
 int process_hue_api_get_configuration(char *responseBuf, uint32_t size)

@@ -9,6 +9,7 @@
 #include <strings.h>
 
 #include "http_parser.h"
+#include "uprintf.h"
 
 char *strtoken(char **str, char separator)
 {

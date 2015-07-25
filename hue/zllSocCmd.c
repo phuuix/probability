@@ -18,11 +18,12 @@
 #include <errno.h>
 
 #include "ipc.h"
+#include "assert.h"
 #include "zllSocCmd.h"
-
-/*******************************************
- * Puhuix: Port to Probability OS 
- *******************************************/
+#include "mt.h"
+#include "hue.h"
+#include "zll_controller.h"
+#include "zcl_lighting.h"
 #include "uprintf.h"
 
 /*********************************************************************
@@ -1156,10 +1157,10 @@ uint32_t zllSocSysRamRead(uint8_t *cmbbuf, uint16_t addr, uint8_t len)
  */
 uint32_t zllSocSysRamWrite(uint8_t *cmbbuf, uint16_t addr, uint8_t len, uint8_t *value)
 {
-	uint8_t cmd[ZLL_CMD_BUF_SIZ];
+	uint8_t cmd[SOC_MT_CMD_BUF_SIZ];
 	uint8_t i=0;
 
-	assert(len+7<ZLL_CMD_BUF_SIZ);
+	assert(len+7<SOC_MT_CMD_BUF_SIZ);
 
 	cmd[i++] = 0xFE;
 	cmd[i++] = 0x03+len; /* length */
@@ -1195,10 +1196,10 @@ uint32_t zllSocSysRamWrite(uint8_t *cmbbuf, uint16_t addr, uint8_t len, uint8_t 
  */
 uint32_t zllSocSysNvInit(uint8_t *cmbbuf, uint16_t itemId, uint16_t itemLen, uint8_t initLen, uint8_t *initData)
 {
-	uint8_t cmd[ZLL_CMD_BUF_SIZ];
+	uint8_t cmd[SOC_MT_CMD_BUF_SIZ];
 	uint8_t i=0;
 
-	assert(initLen+9<ZLL_CMD_BUF_SIZ);
+	assert(initLen+9<SOC_MT_CMD_BUF_SIZ);
 
 	cmd[i++] = 0xFE;
 	cmd[i++] = 0x05+initLen; /* length */
@@ -1268,10 +1269,10 @@ uint32_t zllSocSysNVRead(uint8_t *cmbbuf, uint16_t itemId, uint8_t offset)
  */
 uint32_t zllSocSysNvWrite(uint8_t *cmbbuf, uint16_t itemId, uint8_t offset, uint8_t len, uint8_t *value)
 {
-	uint8_t cmd[ZLL_CMD_BUF_SIZ];
+	uint8_t cmd[SOC_MT_CMD_BUF_SIZ];
 	uint8_t i=0;
 
-	assert(len+8<ZLL_CMD_BUF_SIZ);
+	assert(len+8<SOC_MT_CMD_BUF_SIZ);
 
 	cmd[i++] = 0xFE;
 	cmd[i++] = 0x04+len; /* length */
@@ -1676,18 +1677,15 @@ static void processRpcSysZdo(uint8_t *rpcBuff)
   }
   else if(rpcBuff[1] == MT_ZDO_IEEE_ADDR_RSP)
   {
-  	uint8_t status = rpcBuff[2];
-	uint16_t addr = *(uint16_t *)&rpcBuff[11];
-	uint8_t startIdx = rpcBuff[12];
+  	status = rpcBuff[2];
+	addr = *(uint16_t *)&rpcBuff[11];
+	startIdx = rpcBuff[12];
   	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: IEEE addr rsp, status=%d nwkAddr=0x%x startIdx=%d\n", status, addr, startIdx);
   }
 }
 
 static void processRpcSysSys(uint8_t *rpcBuff)
 {
-  uint8_t status;
-  uint16_t addr;
-  uint8_t startIdx;
   hue_t *hue = zllctrl_get_hue();
 	
   // rpcBuff[1]: cmd1
@@ -1715,9 +1713,6 @@ static void processRpcSysSys(uint8_t *rpcBuff)
 
 static void processRpcSysUtil(uint8_t *rpcBuff)
 {
-  uint8_t status;
-  uint16_t addr;
-  uint8_t startIdx;
   hue_t *hue = zllctrl_get_hue();
 	
   // rpcBuff[1]: cmd1

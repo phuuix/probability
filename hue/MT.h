@@ -48,7 +48,7 @@ extern "C"
  * INCLUDES
  ***************************************************************************************************/
 
-//#include "MT_RPC.h"
+#include "zdprofile.h"
 
 /***************************************************************************************************
  * CONSTANTS
@@ -346,35 +346,35 @@ typedef enum {
 
 /* AREQ to host */
 #define MT_ZDO_AREQ_TO_HOST                  0x80 /* Mark the start of the ZDO CId AREQs to host. */
-#define MT_ZDO_NWK_ADDR_RSP               /* 0x80 */ ((uint8)NWK_addr_req | 0x80)
-#define MT_ZDO_IEEE_ADDR_RSP              /* 0x81 */ ((uint8)IEEE_addr_req | 0x80)
-#define MT_ZDO_NODE_DESC_RSP              /* 0x82 */ ((uint8)Node_Desc_req | 0x80)
-#define MT_ZDO_POWER_DESC_RSP             /* 0x83 */ ((uint8)Power_Desc_req | 0x80)
-#define MT_ZDO_SIMPLE_DESC_RSP            /* 0x84 */ ((uint8)Simple_Desc_req | 0x80)
-#define MT_ZDO_ACTIVE_EP_RSP              /* 0x85 */ ((uint8)Active_EP_req | 0x80)
-#define MT_ZDO_MATCH_DESC_RSP             /* 0x86 */ ((uint8)Match_Desc_req | 0x80)
+#define MT_ZDO_NWK_ADDR_RSP               /* 0x80 */ ((uint8_t)NWK_addr_req | 0x80)
+#define MT_ZDO_IEEE_ADDR_RSP              /* 0x81 */ ((uint8_t)IEEE_addr_req | 0x80)
+#define MT_ZDO_NODE_DESC_RSP              /* 0x82 */ ((uint8_t)Node_Desc_req | 0x80)
+#define MT_ZDO_POWER_DESC_RSP             /* 0x83 */ ((uint8_t)Power_Desc_req | 0x80)
+#define MT_ZDO_SIMPLE_DESC_RSP            /* 0x84 */ ((uint8_t)Simple_Desc_req | 0x80)
+#define MT_ZDO_ACTIVE_EP_RSP              /* 0x85 */ ((uint8_t)Active_EP_req | 0x80)
+#define MT_ZDO_MATCH_DESC_RSP             /* 0x86 */ ((uint8_t)Match_Desc_req | 0x80)
 
 #define MT_ZDO_COMPLEX_DESC_RSP              0x87
 #define MT_ZDO_USER_DESC_RSP                 0x88
-//                                        /* 0x92 */ ((uint8)Discovery_Cache_req | 0x80)
+//                                        /* 0x92 */ ((uint8_t)Discovery_Cache_req | 0x80)
 #define MT_ZDO_USER_DESC_CONF                0x89
 #define MT_ZDO_SERVER_DISC_RSP               0x8A
 
-#define MT_ZDO_END_DEVICE_TIMEOUT_RSP     /* 0x9F */  ((uint8)End_Device_Timeout_req | 0x80)
+#define MT_ZDO_END_DEVICE_TIMEOUT_RSP     /* 0x9F */  ((uint8_t)End_Device_Timeout_req | 0x80)
 
-#define MT_ZDO_END_DEVICE_BIND_RSP        /* 0xA0 */ ((uint8)End_Device_Bind_req | 0x80)
-#define MT_ZDO_BIND_RSP                   /* 0xA1 */ ((uint8)Bind_req | 0x80)
-#define MT_ZDO_UNBIND_RSP                 /* 0xA2 */ ((uint8)Unbind_req | 0x80)
+#define MT_ZDO_END_DEVICE_BIND_RSP        /* 0xA0 */ ((uint8_t)End_Device_Bind_req | 0x80)
+#define MT_ZDO_BIND_RSP                   /* 0xA1 */ ((uint8_t)Bind_req | 0x80)
+#define MT_ZDO_UNBIND_RSP                 /* 0xA2 */ ((uint8_t)Unbind_req | 0x80)
 
-#define MT_ZDO_MGMT_NWK_DISC_RSP          /* 0xB0 */ ((uint8)Mgmt_NWK_Disc_req | 0x80)
-#define MT_ZDO_MGMT_LQI_RSP               /* 0xB1 */ ((uint8)Mgmt_Lqi_req | 0x80)
-#define MT_ZDO_MGMT_RTG_RSP               /* 0xB2 */ ((uint8)Mgmt_Rtg_req | 0x80)
-#define MT_ZDO_MGMT_BIND_RSP              /* 0xB3 */ ((uint8)Mgmt_Bind_req | 0x80)
-#define MT_ZDO_MGMT_LEAVE_RSP             /* 0xB4 */ ((uint8)Mgmt_Leave_req | 0x80)
-#define MT_ZDO_MGMT_DIRECT_JOIN_RSP       /* 0xB5 */ ((uint8)Mgmt_Direct_Join_req | 0x80)
-#define MT_ZDO_MGMT_PERMIT_JOIN_RSP       /* 0xB6 */ ((uint8)Mgmt_Permit_Join_req | 0x80)
+#define MT_ZDO_MGMT_NWK_DISC_RSP          /* 0xB0 */ ((uint8_t)Mgmt_NWK_Disc_req | 0x80)
+#define MT_ZDO_MGMT_LQI_RSP               /* 0xB1 */ ((uint8_t)Mgmt_Lqi_req | 0x80)
+#define MT_ZDO_MGMT_RTG_RSP               /* 0xB2 */ ((uint8_t)Mgmt_Rtg_req | 0x80)
+#define MT_ZDO_MGMT_BIND_RSP              /* 0xB3 */ ((uint8_t)Mgmt_Bind_req | 0x80)
+#define MT_ZDO_MGMT_LEAVE_RSP             /* 0xB4 */ ((uint8_t)Mgmt_Leave_req | 0x80)
+#define MT_ZDO_MGMT_DIRECT_JOIN_RSP       /* 0xB5 */ ((uint8_t)Mgmt_Direct_Join_req | 0x80)
+#define MT_ZDO_MGMT_PERMIT_JOIN_RSP       /* 0xB6 */ ((uint8_t)Mgmt_Permit_Join_req | 0x80)
 
-//                                        /* 0xB8 */ ((uint8)Mgmt_NWK_Update_req | 0x80)
+//                                        /* 0xB8 */ ((uint8_t)Mgmt_NWK_Update_req | 0x80)
 
 #define MT_ZDO_STATE_CHANGE_IND              0xC0
 #define MT_ZDO_END_DEVICE_ANNCE_IND          0xC1

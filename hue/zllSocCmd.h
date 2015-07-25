@@ -78,31 +78,33 @@ typedef enum
 
 //configuration API's
 int32_t zllSocOpen( char *devicePath );
-void zllSocRegisterCallbacks( zllSocCallbacks_t zllSocCallbacks);
 void zllSocClose( void );
 void zllSocProcessRpc (uint8_t *rpcBuff, uint16_t length);
 
 //ZLL API's
-void zllSocTouchLink(void);
-void zllSocResetToFn(void);
-void zllSocSendResetToFn(void);
-void zllSocOpenNwk(void);
+uint32_t zllSocTouchLink(uint8_t *cmbbuf);
+uint32_t zllSocResetToFn(uint8_t *cmbbuf);
+uint32_t zllSocSendResetToFn(uint8_t *cmbbuf);
+uint32_t zllSocOpenNwk(uint8_t *cmbbuf, uint8_t duration);
 //ZCL Set API's
-void zllSocSetState(uint8_t state, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocSetLevel(uint8_t level, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocSetHue(uint8_t hue, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocSetSat(uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t  endpoint, uint8_t addrMode);
-void zllSocSetHueSat(uint8_t hue, uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocAddGroup(uint16_t groupId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocStoreScene(uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocRecallScene(uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocBind(uint16_t srcNwkAddr, uint8_t srcEndpoint, uint8_t srcIEEE[8], uint8_t dstEndpoint, uint8_t dstIEEE[8], uint16_t clusterID);
+uint32_t zllSocSetState(uint8_t *cmbbuf, uint8_t state, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocSetLevel(uint8_t *cmbbuf, uint8_t level, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocSetHue(uint8_t *cmbbuf, uint8_t hue, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocSetSat(uint8_t *cmbbuf, uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t  endpoint, uint8_t addrMode);
+uint32_t zllSocSetHueSat(uint8_t *cmbbuf, uint8_t hue, uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocAddGroup(uint8_t *cmbbuf, uint16_t groupId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocStoreScene(uint8_t *cmbbuf, uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocRecallScene(uint8_t *cmbbuf, uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocBind(uint8_t *cmbbuf, uint16_t srcNwkAddr, uint8_t srcEndpoint, uint8_t srcIEEE[8], uint8_t dstEndpoint, uint8_t dstIEEE[8], uint16_t clusterID);
 //ZCL Get API's
-void zllSocGetState(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocGetLevel(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocGetHue(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocGetSat(uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
-void zllSocSysPing();
+uint32_t zllSocGetState(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocGetLevel(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocGetHue(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocGetSat(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
+uint32_t zllSocSysPing(uint8_t *cmbbuf);
+uint32_t zllSocSysVersion(uint8_t *cmbbuf);
+uint32_t zllSocUtilGetDevInfo(uint8_t *cmbbuf);
+
 #ifdef __cplusplus
 }
 #endif

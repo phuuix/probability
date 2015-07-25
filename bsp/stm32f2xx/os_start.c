@@ -116,6 +116,7 @@ static void root_task(void *p)
 	ETH_BSP_Config();  // ETH base address: 0x40028000
 	lwip_sys_init();
 	//lwip_perf_init();
+	http_server_netconn_init();
 	kprintf("  net inited.\n");
 	#endif
 	

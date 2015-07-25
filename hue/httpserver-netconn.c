@@ -100,6 +100,8 @@ http_server_netconn_thread(void *arg)
   struct netconn *conn, *newconn;
   err_t err;
   LWIP_UNUSED_ARG(arg);
+
+  task_delay(100);
   
   /* Create a new TCP connection handle */
   conn = netconn_new(NETCONN_TCP);

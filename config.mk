@@ -43,6 +43,13 @@ ARCH = ARM
 CROSS_COMPILE = arm-none-eabi-
 endif
 
+# Defination for STM32F2xx SK-M32 bsp
+ifeq ($(BSP), stm32f2xx_skm32)
+BOARD = stm32f2xx_skm32
+ARCH = ARM
+CROSS_COMPILE = arm-none-eabi-
+endif
+
 # Definition for stm32f4 discovery bsp
 ifeq ($(BSP), stm32f4discovery)
 BOARD = stm32f4discovery

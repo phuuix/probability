@@ -48,6 +48,7 @@ typedef struct http_parser
 
 
 void http_parser_dump(http_parser_t *parser);
+int http_parse_request(char *in_buf, uint16_t length, http_parser_t *parser);
 
 #endif //_HTTP_PARSER_H_
 
