@@ -1556,22 +1556,22 @@ static void processRpcSysAppZclFoundation(uint8_t *zclRspBuff, uint8_t zclFrameL
     if( (clusterID == ZCL_CLUSTER_ID_GEN_ON_OFF) && (attrID == ATTRID_ON_OFF) && (dataType == ZCL_DATATYPE_BOOLEAN) )
     {              
         uint8_t state = zclRspBuff[0];
-        zllctrl_set_light_on_off(nwkAddr, endpoint, state);
+        zllctrl_on_get_light_on_off(nwkAddr, endpoint, state);
     }
     else if( (clusterID == ZCL_CLUSTER_ID_GEN_LEVEL_CONTROL) && (attrID == ATTRID_LEVEL_CURRENT_LEVEL) && (dataType == ZCL_DATATYPE_UINT8) )
     {    
         uint8_t level = zclRspBuff[0];
-        zllctrl_set_light_level(nwkAddr, endpoint, level);
+        zllctrl_on_get_light_level(nwkAddr, endpoint, level);
     }
     else if( (clusterID == ZCL_CLUSTER_ID_LIGHTING_COLOR_CONTROL) && (attrID == ATTRID_LIGHTING_COLOR_CONTROL_CURRENT_HUE) && (dataType == ZCL_DATATYPE_UINT8) )
     {
         uint8_t hue = zclRspBuff[0];
-        zllctrl_set_light_hue(nwkAddr, endpoint, hue);
+        zllctrl_on_get_light_hue(nwkAddr, endpoint, hue);
     }
     else if( (clusterID == ZCL_CLUSTER_ID_LIGHTING_COLOR_CONTROL) && (attrID == ATTRID_LIGHTING_COLOR_CONTROL_CURRENT_SATURATION) && (dataType == ZCL_DATATYPE_UINT8) )
     {
         uint8_t sat = zclRspBuff[0];
-        zllctrl_set_light_sat(nwkAddr, endpoint, sat);
+        zllctrl_on_get_light_sat(nwkAddr, endpoint, sat);
     }
     else                
     {

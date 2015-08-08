@@ -187,7 +187,8 @@ int cmd_toggle_trace(struct shell_session *ss, int argc, char **argv)
 extern void processConsoleCommand( char *cmdBuff );
 int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 {
-	char commands[128];
+	char *commands;
+	uint32_t mail[2];
 	uint8_t i, n=0, l;
 
 	if(argc < 2)
@@ -196,6 +197,9 @@ int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 		return 0;
 	}
 
+	commands = malloc(256);
+	assert(commands);
+	
 	for(i=1; i<argc; i++)
 	{
 		l = siprintf(&commands[n], 128-n,  "%s ", argv[i]);
@@ -203,8 +207,11 @@ int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 	}
 
 	ss->output("Zigbee commands: %s\n", commands);
-	
-	processConsoleCommand(commands);
+
+	/* send a event to tzll task */
+	*(uint8_t *)mail = 2; /* ZLL_EVENT_CONSOLE */
+	mail[1] = commands;
+	assert(ROK == mbox_post(&g_hue_mbox, mail));
 	
 	return 0;
 }

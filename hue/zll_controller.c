@@ -315,7 +315,10 @@ uint8_t tlIndicationCb(epInfo_t *epInfo)
  //control this device by default
  savedNwkAddr =  epInfo->nwkAddr; 
  savedEp = epInfo->endpoint;
-   
+
+  /* TODO: add the new device to light list... */
+  /* TODO: get state of new light */
+  
   return 0;
 }
 
@@ -367,12 +370,16 @@ static uint32_t zllctrl_mainloop(hue_t *hue)
             {
                 /* process requests from hue */
                 zllctrl_process_json_message(hue, huemail.data, huemail.length);
+				free(huemail.data);
             }
             else if(huemail.event == ZLL_EVENT_CONSOLE)
             {
                 /* process requests from console */
                 processConsoleCommand((char *)huemail.data);
+				free(huemail.data);
             }
+			else
+				uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unknown hue event: %d\n", huemail.event);
         }
 
         /* wait for response and indication from soc */
@@ -412,7 +419,7 @@ hue_light_t *zllctrl_find_light(uint16_t nwkAddr, uint8_t endpoint)
     return light;
 }
 
-int zllctrl_set_light_sat(uint16_t nwkAddr, uint8_t endpoint, uint8_t sat)
+int zllctrl_on_get_light_sat(uint16_t nwkAddr, uint8_t endpoint, uint8_t sat)
 {
     hue_light_t *light;
 
@@ -428,7 +435,7 @@ int zllctrl_set_light_sat(uint16_t nwkAddr, uint8_t endpoint, uint8_t sat)
 }
 
 
-int zllctrl_set_light_hue(uint16_t nwkAddr, uint8_t endpoint, uint8_t hue)
+int zllctrl_on_get_light_hue(uint16_t nwkAddr, uint8_t endpoint, uint8_t hue)
 {
     hue_light_t *light;
 
@@ -444,7 +451,7 @@ int zllctrl_set_light_hue(uint16_t nwkAddr, uint8_t endpoint, uint8_t hue)
 }
 
 
-int zllctrl_set_light_level(uint16_t nwkAddr, uint8_t endpoint, uint8_t level)
+int zllctrl_on_get_light_level(uint16_t nwkAddr, uint8_t endpoint, uint8_t level)
 {
     hue_light_t *light;
 
@@ -460,7 +467,7 @@ int zllctrl_set_light_level(uint16_t nwkAddr, uint8_t endpoint, uint8_t level)
 }
 
 
-int zllctrl_set_light_on_off(uint16_t nwkAddr, uint8_t endpoint, uint8_t state)
+int zllctrl_on_get_light_on_off(uint16_t nwkAddr, uint8_t endpoint, uint8_t state)
 {
     hue_light_t *light;
 
@@ -518,14 +525,14 @@ uint32_t zllctrl_start_soc_eventloop(uint32_t deadline, hue_t *hue, uint32_t (*e
 	return endCode;
 }
 
-static uint32_t zllsoc_process_sysversion(hue_t *hue, uint8_t *data, uint32_t length)
+static uint32_t zllsoc_is_sysversion_processed(hue_t *hue, uint8_t *data, uint32_t length)
 {
 	if(hue->product_id != 0)
 		return ROK;
 	return RTIMEOUT;
 }
 
-static uint32_t zllsoc_process_devinfo(hue_t *hue, uint8_t *data, uint32_t length)
+static uint32_t zllsoc_is_devinfo_processed(hue_t *hue, uint8_t *data, uint32_t length)
 {
 	return RTIMEOUT;
 }
@@ -537,7 +544,7 @@ uint32_t zllctrl_connect_to_soc(hue_t *hue)
 	
 	/* get sys version */
 	zllSocSysVersion(NULL);
-    ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, zllsoc_process_sysversion);
+    ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, zllsoc_is_sysversion_processed);
     if(ret == RTIMEOUT)
     {
         uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "can't get sysversion: %d\n", ret);
@@ -546,7 +553,7 @@ uint32_t zllctrl_connect_to_soc(hue_t *hue)
 
 	/* get device info */
 	zllSocUtilGetDevInfo(NULL);
-    ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, zllsoc_process_devinfo);
+    ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, zllsoc_is_devinfo_processed);
     if(ret == RTIMEOUT)
     {
         uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "can't get device info\n");
