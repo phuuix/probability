@@ -39,7 +39,7 @@
 /* ticks per second */
 #define TICKS_PER_SECOND	100
 /* system's maximal task number */
-#define MAX_TASK_NUMBER		8
+#define MAX_TASK_NUMBER		16
 /* system's maximal task_delay number */
 #define MAX_TASK_DELAY_NUMBER	8
 /* idle task's stack size */

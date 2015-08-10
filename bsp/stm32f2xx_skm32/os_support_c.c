@@ -184,19 +184,36 @@ static void dummy_isr_fun(int i)
 
 typedef void (*ISR_FUNC)(int);
 
+/*
+ * Interrupt priority principles: 
+ * Only the group priority determines preemption of interrupt exceptions. When the processor
+ * is executing an interrupt exception handler, another interrupt with the same group priority as
+ * the interrupt being handled does not preempt the handler,
+ * If multiple pending interrupts have the same group priority, the subpriority field determines
+ * the order in which they are processed. If multiple pending interrupts have the same group
+ * priority and subpriority, the interrupt with the lowest IRQ number is processed first.
+ *
+ * Set interrupt group priority to 0x07: 
+ *   group priority bits = none 
+ *   sub priority bits = 4 (16 levels)
+ * 
+ * Set PendSV interrupt priority to 0:
+ *   prevent other interrupts destroy task switching
+ */
 void interrupt_init()
 {
 	int32_t i;
 	
-	/* set group priority none: no effect? */
+	/* set group priority none */
 	NVIC_SetPriorityGrouping(0x07);
 
-	/* set PENDSV's priority to lowest */
-	NVIC_SetPriority(PendSV_IRQn, 15);
+	/* set PENDSV's priority to highest */
+	NVIC_SetPriority(PendSV_IRQn, 15); // set prio to 0 will fault, why?
 
 	/* set SysTick's priority to lowest */
 	NVIC_SetPriority(SysTick_IRQn, 15);
 	
+    /* pre-set dummy isr */
 	for(i=0; i<MAX_HANDLERS; i++)
 		isr_table[i] = (uint32_t)dummy_isr_fun;
 }
@@ -260,11 +277,14 @@ void dump_call_stack(uint32_t fp, uint32_t low, uint32_t high)
  */
 void panic(char *infostr)
 {
-	uint32_t sp;
-	uint32_t size;
+	uint32_t sp, fp, psr;
+	uint32_t size, i;
 	bsp_fsave();
 	
-	kprintf("PANIC: %s\n", infostr);
+    psr = get_psr();
+    fp = get_fp();
+
+	kprintf("PANIC psr=0x%08x fp=0x%08x: %s\n", psr, fp, infostr);
 
 	if(get_psr() & 0xFF){
 		/* in exception context, dump exception stack */
@@ -301,7 +321,17 @@ void panic(char *infostr)
 		kprintf("current is overwriten! current=0x%x\n", current);
 	
 
-	/* dump system ready queue */
+	/* dump task info */
+    for(i=0; i<MAX_TASK_NUMBER; i++)
+    {
+        if(systask[i].state != TASK_STATE_DEAD)
+        {
+			kprintf("Task %d (%8s): sp=0x%08x taskq=0x%08x state8_prio8_pri_origin8_flags8=0x%08x stack=(0x%08x %d)\n", 
+                    i, systask[i].name, systask[i].sp, systask[i].taskq,
+                    (systask[i].state<<24)|(systask[i].priority<<16)|(systask[i].pri_origin<<8)|(systask[i].flags),
+                    systask[i].stack_base, systask[i].stack_size);
+        }
+    }
 
 	/* dump memory usage */
 	memory_dump();

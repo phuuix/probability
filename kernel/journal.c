@@ -28,14 +28,12 @@
 
 #ifdef INCLUDE_JOURNAL
 
-#define JOURNAL_CLASS1_MAXRECORD  32
 #define JOURNAL_CLASS1_NEXTRECORD (&journal_class1_history[journal_class1_index]);
 #define JOURNAL_CLASS1_UPDATENEXT() \
 	do{ \
 		journal_class1_index = ((journal_class1_index+1)>=JOURNAL_CLASS1_MAXRECORD)?0:(journal_class1_index+1); \
 	}while(0)
 
-#define JOURNAL_CLASS2_MAXRECORD  16
 #define JOURNAL_CLASS2_NEXTRECORD (&journal_class2_history[journal_class2_index]);
 #define JOURNAL_CLASS2_UPDATENEXT() \
 	do{ \
@@ -77,7 +75,7 @@ void journal_task_switch(struct dtask *from, struct dtask *to)
 	jtaskswitch->t_from = TASK_T(from);
 	jtaskswitch->t_to = TASK_T(to);
 	jtaskswitch->tfrom_state = from->state;
-	jtaskswitch->tfrom_flags = from->flags;
+	jtaskswitch->tfrom_flags = from->flags | (sys_get_active_int()<<4);
 	jtaskswitch->tto_wakeup_cause = to->wakeup_cause;
 
 	JOURNAL_CLASS1_UPDATENEXT();
@@ -92,6 +90,7 @@ void journal_ipc_pend(ipc_t *ipc, task_t task)
 	jipcop->time = tick();
 	jipcop->ipc_ptr = ipc;
 	jipcop->ipctype = ipc->type;
+    jipcop->active_ints = sys_get_active_int();
 	jipcop->tid = TASK_T(current);
 	jipcop->jtype = JOURNAL_TYPE_IPCPEND;
 
@@ -108,6 +107,7 @@ void journal_ipc_post(ipc_t *ipc, task_t task)
 	jipcop->time = tick();
 	jipcop->ipc_ptr = ipc;
 	jipcop->ipctype = ipc->type;
+    jipcop->active_ints = sys_get_active_int();
 	jipcop->tid = TASK_T(current);
 	jipcop->jtype = JOURNAL_TYPE_IPCPOST;
 
@@ -247,7 +247,7 @@ void pmc_dump()
 	for(i=1; i<MAX_TASK_NUMBER; i++)
 	{
 		if(systask[i].state != TASK_STATE_DEAD)
-			kprintf("Task %d counters: %08d %08d %08d\n", i, 
+			kprintf("Task %d (%8s) counters: %08d %08d %08d\n", i, systask[i].name,
 				systask[i].PMC_task32[0]/1000, systask[i].PMC_task32[1], systask[i].PMC_task32[2]);
 	}
 }

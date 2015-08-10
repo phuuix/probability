@@ -19,12 +19,16 @@
 #ifndef _JOURNAL_H_
 #define _JOURNAL_H_
 
+#ifndef CRASHDUMP  // crash dump is a host tool
 #include "ipc.h"
+#endif
 
 /**********************************************************************
  * Journal
  * 
  **********************************************************************/
+#define JOURNAL_CLASS1_MAXRECORD  64
+#define JOURNAL_CLASS2_MAXRECORD  16
 
 enum journal_type
 {
@@ -53,7 +57,8 @@ struct journal_ipcop
 	uint32_t time;
 	uint8_t jtype;
 	uint8_t ipctype;
-	uint16_t tid;
+    uint8_t active_ints;
+	uint8_t tid;
 	ipc_t *ipc_ptr;
 };
 

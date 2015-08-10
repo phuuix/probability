@@ -170,9 +170,9 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 {
   struct pbuf *q;
   uint32_t l = 0;
-  u8 *buffer ;
+  uint8_t *buffer ;
    
-  while((ETH_GetDMATxDescFlagStatus(DMATxDescToSet, ETH_DMATxDesc_OWN) != (u32)RESET) & (l<10))
+  while((ETH_GetDMATxDescFlagStatus(DMATxDescToSet, ETH_DMATxDesc_OWN) != (uint32_t)RESET) & (l<10))
   {
   	l ++;
 	task_delay(1);
@@ -181,12 +181,12 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   if(l<10)
   {
   	l = 0;
-    buffer =  (u8 *)(DMATxDescToSet->Buffer1Addr);
+    buffer =  (uint8_t *)(DMATxDescToSet->Buffer1Addr);
     for(q = p; q != NULL; q = q->next) 
     {
       memcpy((u8_t*)&buffer[l], q->payload, q->len);
-	  kprintf("low_level_output: \n");
-	  dump_buffer(&buffer[l], q->len);
+	  uprintf(UPRINT_DEBUG, UPRINT_BLK_NET, "low_level_output: \n");
+	  //dump_buffer(&buffer[l], q->len);
       l = l + q->len;
     }
     ETH_Prepare_Transmit_Descriptors(l);
@@ -218,7 +218,7 @@ static struct pbuf * low_level_input(struct netif *netif)
   u16_t len;
   uint32_t l=0,i =0;
   FrameTypeDef frame;
-  u8 *buffer;
+  uint8_t *buffer;
   __IO ETH_DMADESCTypeDef *DMARxNextDesc;
   
   p = NULL;
@@ -232,7 +232,7 @@ static struct pbuf * low_level_input(struct netif *netif)
     
     /* Obtain the size of the packet and put it into the "len" variable. */
     len = frame.length;
-    buffer = (u8 *)frame.buffer;
+    buffer = (uint8_t *)frame.buffer;
 
     /* We allocate a pbuf chain of pbufs from the pool. */
     p = pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
@@ -271,7 +271,7 @@ static struct pbuf * low_level_input(struct netif *netif)
   
   
   /* When Rx Buffer unavailable flag is set: clear it and resume reception */
-  if ((ETH->DMASR & ETH_DMASR_RBUS) != (u32)RESET)  
+  if ((ETH->DMASR & ETH_DMASR_RBUS) != (uint32_t)RESET)  
   {
     /* Clear RBUS ETHERNET DMA flag */
     ETH->DMASR = ETH_DMASR_RBUS;

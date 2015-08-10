@@ -41,13 +41,15 @@ static uint32_t schedule_flags;
 static uint32_t active_ints;
 static void (*task_schedule_hook)(struct dtask *, struct dtask *);
 
+extern char _irq_stack_start[];
+
 
 void task_set_schedule_hook(void (*hook)(struct dtask *, struct dtask *))
 {
 	task_schedule_hook = hook;
 }
 
-extern char _irq_stack_start[];
+
 /*
  * called when system interrupt incoming
  * this function isn't used if bsp_task_switch==bsp_task_switch_interrupt
@@ -73,6 +75,11 @@ void sys_interrupt_exit(uint32_t irq)
 
 	assert(stack_bottom == 8995);
 	assert(active_ints == 0);
+}
+
+uint32_t sys_get_active_int()
+{
+    return active_ints;
 }
 
 /*

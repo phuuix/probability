@@ -163,13 +163,14 @@ typedef unsigned long  DWORD;
 typedef unsigned short WORD;
 typedef unsigned char  BYTE;
 
+#if 0  // avoid to conflict with other definitions
 typedef __signed__ char s8;
 typedef unsigned char u8;
 typedef __signed__ short s16;
 typedef unsigned short u16;
 typedef __signed__ int s32;
 typedef unsigned int u32;
-
+#endif
 
 __END_DECLS
 

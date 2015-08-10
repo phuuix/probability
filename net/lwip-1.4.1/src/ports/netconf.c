@@ -65,7 +65,7 @@ void lwip_sys_init(void)
   struct ip_addr gw;
 
   uprintf_set_enable(UPRINT_INFO, UPRINT_BLK_NET, 1);
-  uprintf_set_enable(UPRINT_DEBUG, UPRINT_BLK_NET, 1);
+  uprintf_set_enable(UPRINT_DEBUG, UPRINT_BLK_NET, 0);
   
   /* Create tcp_ip stack thread */
   tcpip_init( NULL, NULL );	

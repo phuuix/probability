@@ -101,7 +101,10 @@ err_t sys_mbox_new(sys_mbox_t *mbox, int size)
 {
 	int ret;
 	
-	ret = mbox_initialize(mbox, 1, size, NULL);
+    if(size == 0)
+        size = 16;  // default size is 16
+
+	ret = mbox_initialize(mbox, 2, size, NULL);
 	
 	if(ret == ROK)
 		return ERR_OK;
@@ -215,6 +218,7 @@ sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg, 
 		stacksize = SYS_LWIP_THREAD_STACK_SIZE;
 
 	t = task_create((char *)name, thread, arg, NULL, stacksize, prio, 50, 0);
+    assert(t>0);
 	task_resume_noschedule(t);
 
 	return t;

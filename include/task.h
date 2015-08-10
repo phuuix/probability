@@ -176,5 +176,7 @@ void task_set_schedule_hook(void (*hook)(struct dtask *, struct dtask *));
 
 void sys_interrupt_enter(uint32_t irq);
 void sys_interrupt_exit(uint32_t irq);
+uint32_t sys_get_active_int();
+
 #endif /* __D_TASK_H__ */
 

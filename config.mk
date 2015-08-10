@@ -5,7 +5,7 @@
 # BSP: Must define this environment variable in SHELL.
 
 ifeq ($(BSP),)
-BSP = stm32f2xx
+BSP = stm32f2xx_skm32
 endif
 
 # Defination for ep7312 bsp

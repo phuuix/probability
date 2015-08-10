@@ -124,6 +124,7 @@ static void root_task(void *p)
 
 	kprintf("  Root task ended.\n");
 }
+
 static void root_task_init()
 {
 	task_t t;
