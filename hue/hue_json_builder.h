@@ -5,6 +5,12 @@
 
 uint32_t hue_json_build_all_lights(char *out_buf, uint32_t in_len);
 uint32_t hue_json_build_light(char * out_buf,uint32_t in_len,hue_light_t * light);
+uint32_t hue_json_build_new_lights(char *out_buf, uint32_t in_len);
+uint32_t hue_json_build_search_new_lights(char *out_buf, uint32_t in_len);
+uint32_t hue_json_build_rename_light(char *out_buf, uint32_t in_len, hue_light_t *light);
+uint32_t hue_json_build_set_light_state(char *out_buf, uint32_t in_len, hue_light_t *in_light, uint32_t in_bitmap);
+uint32_t hue_json_build_error(char *out_buf, uint32_t in_len, uint32_t in_error_id);
+
 uint32_t hue_json_build_create_user(char *out_buf, uint32_t in_len, uint8_t success, uint8_t *username);
 
 #endif //_HUE_JSON_BUILDER_H_

@@ -9,6 +9,7 @@
 #include "hue_json_builder.h"
 
 #define JSON_SPRINTF siprintf
+#define TMPSTR_SIZE 64
 
 const static char *strHueSuccess = "success";
 const static char *strHueFailure = "failure";
@@ -16,7 +17,13 @@ const static char *strHueAlert[] = {"none", "select", "lselect"};
 const static char *strHueEffect[] = {"none", "colorloop"};
 const static char *strHueColormode[] = {"hs", "xy", "ct"};
 //FIXME:   strHueType
-const static char *strHueType[] = {"Extended color light", "Living Colors"};   
+const static char *strHueType[] = {"Extended color light", "Living Colors"};
+const static char *strHueState[] = 
+{
+    "on", "bri", "hue", "sat", "xy", "ct", 
+    "alert", "effect", "transitiontime",
+    "bri_inc", "sat_inc", "hue_inc", "xy_inc", "ct_inc",
+};
 
 uint32_t json_build_char(char *out_buf, uint32_t in_len, char c)
 {
@@ -313,6 +320,364 @@ uint32_t hue_json_build_all_lights(char *out_buf, uint32_t in_len)
 	return offset;
 }
 
+/* FIXME: current only return an empty set... */
+uint32_t hue_json_build_new_lights(char *out_buf, uint32_t in_len)
+{
+	uint32_t offset;
+
+	offset = 0;
+	offset += json_build_object_start(&out_buf[offset], in_len-offset);
+	offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+	return offset;
+}
+
+uint32_t hue_json_build_search_new_lights(char *out_buf, uint32_t in_len)
+{
+    uint32_t offset;
+
+    offset = 0;
+    offset += json_build_array_start(&out_buf[offset], in_len-offset);
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+    
+    offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+    offset += json_build_string(&out_buf[offset], in_len-offset, "/lights");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += json_build_string(&out_buf[offset], in_len-offset, "Searching for new devices");
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+    
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+    offset += json_build_array_end(&out_buf[offset], in_len-offset);
+    return offset;
+}
+
+uint32_t hue_json_build_rename_light(char *out_buf, uint32_t in_len, hue_light_t *light)
+{
+    uint32_t offset;
+    char tmpstr[100];
+
+    offset = 0;
+    offset += json_build_array_start(&out_buf[offset], in_len-offset);
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+    siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/name", light->id);
+    offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += json_build_string(&out_buf[offset], in_len-offset, (char *)light->name);
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+    offset += json_build_array_end(&out_buf[offset], in_len-offset);
+
+    return offset;
+}
+
+
+uint32_t hue_json_build_set_light_state(char *out_buf, uint32_t in_len, hue_light_t *in_light, uint32_t in_bitmap)
+{
+    uint32_t offset = 0;
+    uint32_t empty=1;
+	char tmpstr[100];
+
+    offset += json_build_array_start(&out_buf[offset], in_len-offset);
+
+    /* for each value to be set, return a success response */
+    if((in_bitmap & (1<<HUE_STATE_BIT_ON)) != 0)
+    {
+        empty = 0;
+
+        // eg: {"success":{"/lights/1/state/on":true}},
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_ON]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_bool(&out_buf[offset], in_len-offset, in_light->on);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+	if((in_bitmap & (1<<HUE_STATE_BIT_BRI)) != 0)
+    {
+        empty = 0;
+
+        // eg: {"success":{"/lights/1/state/bri":200}},
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_BRI]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_int(&out_buf[offset], in_len-offset, in_light->bri);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+    
+    if((in_bitmap & (1<<HUE_STATE_BIT_HUE)) != 0)
+    {
+        empty = 0;
+
+        // eg: {"success":{"/lights/1/state/hue":50000}}
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_HUE]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_int(&out_buf[offset], in_len-offset, in_light->hue);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if((in_bitmap & (1<<HUE_STATE_BIT_SAT)) != 0)
+    {
+        empty = 0;
+
+        // 
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_SAT]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_int(&out_buf[offset], in_len-offset, in_light->sat);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if((in_bitmap & (1<<HUE_STATE_BIT_XY)) != 0)
+    {
+        empty = 0;
+
+        // eg: {"success":{"/lights/1/state/xy":[0.5, 0.5]}},
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_XY]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        // xy is an array of size 2
+        offset += json_build_array_start(&out_buf[offset], in_len-offset);
+        offset += hue_json_build_xy(&out_buf[offset], in_len-offset, in_light->x);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        offset += hue_json_build_xy(&out_buf[offset], in_len-offset, in_light->y);
+        offset += json_build_array_end(&out_buf[offset], in_len-offset);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if((in_bitmap & (1<<HUE_STATE_BIT_CT)) != 0)
+    {
+        empty = 0;
+
+        // 
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_CT]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_int(&out_buf[offset], in_len-offset, in_light->ct);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if((in_bitmap & (1<<HUE_STATE_BIT_ALERT)) != 0)
+    {
+        empty = 0;
+
+        // 
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_ALERT]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_string(&out_buf[offset], in_len-offset, strHueAlert[in_light->alert]);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if((in_bitmap & (1<<HUE_STATE_BIT_EFFECT)) != 0)
+    {
+        empty = 0;
+
+        // 
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_EFFECT]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_string(&out_buf[offset], in_len-offset, strHueEffect[in_light->effect]);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if((in_bitmap & (1<<HUE_STATE_BIT_TRANSTIME)) != 0)
+    {
+        empty = 0;
+
+        // 
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_TRANSTIME]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_int(&out_buf[offset], in_len-offset, in_light->transitiontime);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if((in_bitmap & (1<<HUE_STATE_BIT_BRIINC)) != 0)
+    {
+        empty = 0;
+
+        // 
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_BRIINC]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_int(&out_buf[offset], in_len-offset, in_light->bri);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if((in_bitmap & (1<<HUE_STATE_BIT_HUEINC)) != 0)
+    {
+        empty = 0;
+
+        // 
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_HUEINC]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_int(&out_buf[offset], in_len-offset, in_light->hue);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if((in_bitmap & (1<<HUE_STATE_BIT_CTINC)) != 0)
+    {
+        empty = 0;
+
+        // 
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_CTINC]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_int(&out_buf[offset], in_len-offset, in_light->ct);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if((in_bitmap & (1<<HUE_STATE_BIT_XYINC)) != 0)
+    {
+        empty = 0;
+
+        // eg: {"success":{"/lights/1/state/xy":[0.5, 0.5]}},
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+        offset += json_build_string(&out_buf[offset], in_len-offset, "success");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        siprintf(tmpstr, TMPSTR_SIZE, "/lights/%d/state/%s", in_light->id, strHueState[HUE_STATE_BIT_XYINC]);
+        offset += json_build_string(&out_buf[offset], in_len-offset, tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        // xy is an array of size 2
+        offset += json_build_array_start(&out_buf[offset], in_len-offset);
+        offset += hue_json_build_xy(&out_buf[offset], in_len-offset, in_light->x);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        offset += hue_json_build_xy(&out_buf[offset], in_len-offset, in_light->y);
+        offset += json_build_array_end(&out_buf[offset], in_len-offset);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+
+    if(empty == 0)
+        offset --;
+
+    offset += json_build_array_end(&out_buf[offset], in_len-offset);
+
+	return offset;
+}
+
 uint32_t hue_json_build_create_user(char *out_buf, uint32_t in_len, uint8_t success, uint8_t *username)
 {
 	uint32_t offset;
@@ -334,5 +699,35 @@ uint32_t hue_json_build_create_user(char *out_buf, uint32_t in_len, uint8_t succ
 	offset += json_build_object_end(&out_buf[offset], in_len-offset);
 	offset += json_build_array_end(&out_buf[offset], in_len-offset);
 	return offset;
+}
+
+uint32_t hue_json_build_error(char *out_buf, uint32_t in_len, uint32_t in_error_id)
+{
+    uint32_t offset;
+
+	offset = 0;
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "error");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "type");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += json_build_int(&out_buf[offset], in_len-offset, in_error_id);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "description");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += json_build_string(&out_buf[offset], in_len-offset, "unknown");  //TODO: add description
+
+    //TODO: build for "address"
+
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+    return offset;
 }
 

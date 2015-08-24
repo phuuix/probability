@@ -7,6 +7,55 @@
 
 #define UPRINT_BLK_HUE 6
 
+/* HUE error ID */
+#define HUE_ERROR_ID_001 001        //unauthorized user
+#define HUE_ERROR_ID_002 002        //body contains invalid JSON
+#define HUE_ERROR_ID_003 003        //resource, <resource>, not available
+#define HUE_ERROR_ID_004 004        //method, <method_name>, not available for resource, <resource>
+#define HUE_ERROR_ID_005 005        //missing parameters in body
+#define HUE_ERROR_ID_006 006        //parameter, <parameter>, not available
+#define HUE_ERROR_ID_007 007        //invalid value, <value>, for parameter, <parameter>
+#define HUE_ERROR_ID_008 008        //parameter, <parameter>, is not modifiable
+#define HUE_ERROR_ID_011 011        //too many items in list
+#define HUE_ERROR_ID_012 012        //Portal connection required
+#define HUE_ERROR_ID_101 101        //link button not pressed
+#define HUE_ERROR_ID_110 110        //DHCP cannot be disabled
+#define HUE_ERROR_ID_111 111        //Invalid updatestate
+#define HUE_ERROR_ID_201 201        //parameter, <parameter>, is not modifiable. Device is set to off.
+#define HUE_ERROR_ID_301 301        //group could not be created. Group table is full.
+#define HUE_ERROR_ID_302 302        //device, <id>, could not be added to group. Device's group table is full.
+#define HUE_ERROR_ID_304 304        //device, <id>, could not be added to the scene. Device is unreachable.
+#define HUE_ERROR_ID_305 305        //It is not allowed to update or delete group of this type
+#define HUE_ERROR_ID_401 401        //scene could not be created. Scene creation in progress.
+#define HUE_ERROR_ID_402 402        //Scene could not be created. Scene buffer in bridge full
+#define HUE_ERROR_ID_501 501        //No allowed to create sensor type
+#define HUE_ERROR_ID_502 502        //Sensor list is full
+#define HUE_ERROR_ID_601 601        //Rule engine full
+#define HUE_ERROR_ID_607 607        //Condition error
+#define HUE_ERROR_ID_608 608        //Action error
+#define HUE_ERROR_ID_609 609        //Unable to activate
+#define HUE_ERROR_ID_701 701        //Schedule list is full
+#define HUE_ERROR_ID_702 702        //Schedule time-zone not valid
+#define HUE_ERROR_ID_703 703        //Schedule cannot set time and local time
+#define HUE_ERROR_ID_704 704        //Cannot create schedule
+#define HUE_ERROR_ID_705 705        //Cannot enable schedule, time is in the past
+#define HUE_ERROR_ID_901 901        //Internal error, <error code>
+
+/* state bits */
+#define HUE_STATE_BIT_ON    0
+#define HUE_STATE_BIT_BRI   1
+#define HUE_STATE_BIT_HUE   2
+#define HUE_STATE_BIT_SAT   3
+#define HUE_STATE_BIT_XY    4
+#define HUE_STATE_BIT_CT    5
+#define HUE_STATE_BIT_ALERT 6
+#define HUE_STATE_BIT_EFFECT    7
+#define HUE_STATE_BIT_TRANSTIME 8
+#define HUE_STATE_BIT_BRIINC    9
+#define HUE_STATE_BIT_HUEINC    10
+#define HUE_STATE_BIT_CTINC     11
+#define HUE_STATE_BIT_XYINC     12
+
 typedef struct zigbee_addr
 {
     uint16_t network_addr;
@@ -54,6 +103,7 @@ This parameter is only present when the light supports at least one of the value
 	uint16_t ct;			//The Mired Color temperature?of the light. 2012 connected lights are capable of 153 (6500K) to 500 (2000K)
 	uint16_t x;				//Q0.15, The x and y coordinates of a color in CIE color space.
 	uint16_t y;				//Q0.15
+    uint16_t transitiontime;//in 100ms
 
 	uint8_t type;			//A fixed name describing the type of light e.g. "Extended color light"
 	uint8_t name[32];		//A unique, editable name given to the light
@@ -98,12 +148,51 @@ typedef struct hue_s
     uint8_t socbuf[SOC_MT_CMD_BUF_SIZ];    // store the MT response and indication
 }hue_t;
 
-typedef struct hue_mail_s
+#define HUE_MAIL_CMD_GET_ALL_LIGHTS   0
+#define HUE_MAIL_CMD_GET_NEW_LIGHTS   1
+#define HUE_MAIL_CMD_SEACH_NEW_LIGHTS 2
+#define HUE_MAIL_CMD_GET_ONE_LIGHT    3
+#define HUE_MAIL_CMD_RENAME_LIGHT     4
+#define HUE_MAIL_CMD_SET_ONE_LIGHT    5
+#define HUE_MAIL_CMD_DELETE_LIGHT     6
+
+typedef union hue_mail_s
 {
-	uint8_t event;
-    uint8_t flags;
-    uint16_t length;
-	uint8_t *data;
+    struct // hue_mail_search_new_lights
+    {
+        uint8_t cmd;
+        uint8_t filler1;
+        uint16_t filler2;
+        uint8_t *username;
+        uint8_t *unused;        // later will be a device ID list
+    } search_new_lights;
+
+    struct // hue_mail_rename_light
+    {
+        uint8_t cmd;
+        uint8_t light;
+        uint16_t filler2;
+        uint8_t *username;
+        uint8_t *lightname;
+    } rename_light;
+
+    struct // hue_mail_set_one_light
+    {
+        uint8_t cmd;
+        uint8_t light;
+        uint16_t flags;          // flags indicate which field will be set
+        uint8_t *username;
+        hue_light_t *state;
+    } set_one_light;
+
+    struct //
+    {
+        uint8_t cmd;
+        uint8_t filler1;
+        uint16_t filler2;
+        uint8_t *username;
+        uint8_t *data;
+    } hue_mail_cmd_common;
 }hue_mail_t;
 
 typedef struct zll_mail_s

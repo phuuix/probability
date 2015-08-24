@@ -119,6 +119,13 @@ Default_Handler:
   pop  {pc}
   .size  Default_Handler, .-Default_Handler
 
+HardFault_Handler:
+	TST lr, #4
+	ITE EQ
+	MRSEQ r0, MSP
+	MRSNE r0, PSP
+	B Hard_Fault_Handler
+.size  HardFault_Handler, .-HardFault_Handler
 
 pendsv_handler:
     cpsid   i                                                   @ Prevent interruption during context switch
@@ -141,6 +148,7 @@ pendsv_handler:
     cpsie   i
     bx      lr                                                  @ Exception return will restore remaining context
 .size  pendsv_handler, .-pendsv_handler
+
 
 /******************************************************************************
 *

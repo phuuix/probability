@@ -119,6 +119,13 @@ Default_Handler:
   pop  {pc}
   .size  Default_Handler, .-Default_Handler
 
+hard_fault_hander:
+	TST lr, #4
+	ITE EQ
+	MRSEQ r0, MSP
+	MRSNE r0, PSP
+	B Hard_Fault_Handler
+.size  hard_fault_hander, .-hard_fault_hander
 
 pendsv_handler:
     cpsid   i                                                   @ Prevent interruption during context switch
@@ -141,6 +148,7 @@ pendsv_handler:
     cpsie   i
     bx      lr                                                  @ Exception return will restore remaining context
 .size  pendsv_handler, .-pendsv_handler
+
 
 /******************************************************************************
 *
@@ -267,7 +275,7 @@ g_pfnVectors:
    .thumb_set NMI_Handler,Default_Handler
   
    .weak      HardFault_Handler
-   .thumb_set HardFault_Handler,Default_Handler
+   .thumb_set HardFault_Handler,hard_fault_hander
   
    .weak      MemManage_Handler
    .thumb_set MemManage_Handler,Default_Handler

@@ -95,6 +95,17 @@ uint32_t get_fp(void)
     return temp;
 }
 
+uint32_t get_lr(void)
+{
+    uint32_t temp;
+    __asm__ __volatile__(
+			 "mov %0, lr"
+			 : "=r" (temp)
+			 :
+			 : "memory");
+    return temp;
+}
+
 uint32_t get_psr(void)
 {
 	uint32_t temp;
@@ -182,6 +193,33 @@ static void dummy_isr_fun(int i)
 }
 
 
+enum { r0, r1, r2, r3, r12, lr, pc, psr};
+
+/* If the funciton calls at least other function
+ *   ASM code always push {r7, lr}
+ * else
+ *   ASM code push {r7}
+ * r7 is later modified to indicate the bottom of stack.
+ */
+void Hard_Fault_Handler(uint32_t stack[])
+{
+    /* get LR to detect if MSP or PSP is used */
+
+    kprintf("r0  = 0x%08x\n", stack[r0]);
+    kprintf("r1  = 0x%08x\n", stack[r1]);
+    kprintf("r2  = 0x%08x\n", stack[r2]);
+    kprintf("r3  = 0x%08x\n", stack[r3]);
+    kprintf("r12 = 0x%08x\n", stack[r12]);
+    kprintf("lr  = 0x%08x\n", stack[lr]);
+    kprintf("pc  = 0x%08x\n", stack[pc]);
+    kprintf("psr = 0x%08x\n", stack[psr]);
+
+    kprintf ("BFAR=0x%08x, CFSR=0x%08x, HFSR=0x%08x, DFSR=0x%08x, AFSR=0x%08x, MMFAR=0x%08x\n",
+                SCB->BFAR, SCB->CFSR, SCB->HFSR, SCB->DFSR, SCB->AFSR, SCB->MMFAR);
+
+    panic("Hard Fault!!");
+}
+
 typedef void (*ISR_FUNC)(int);
 
 /*
@@ -208,7 +246,7 @@ void interrupt_init()
 	NVIC_SetPriorityGrouping(0x07);
 
 	/* set PENDSV's priority to highest */
-	NVIC_SetPriority(PendSV_IRQn, 15); // set prio to 0 will fault, why?
+	NVIC_SetPriority(PendSV_IRQn, 0); // set prio to 0 will fault, why?
 
 	/* set SysTick's priority to lowest */
 	NVIC_SetPriority(SysTick_IRQn, 15);

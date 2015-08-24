@@ -11,6 +11,7 @@
 #include "uprintf.h"
 #include "siprintf.h"
 #include "journal.h"
+#include "assert.h"
 
 /* all commands:
  * i: show tasks
@@ -22,7 +23,7 @@
  */
 
 static struct shell_session session;
-
+extern mbox_t g_hue_mbox;
 void task_dump(struct shell_session *ss, task_t t);
 
 
@@ -210,7 +211,7 @@ int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 
 	/* send a event to tzll task */
 	*(uint8_t *)mail = 2; /* ZLL_EVENT_CONSOLE */
-	mail[1] = commands;
+	mail[1] = (uint32_t)commands;
 	assert(ROK == mbox_post(&g_hue_mbox, mail));
 	
 	return 0;

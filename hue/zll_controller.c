@@ -364,6 +364,7 @@ static uint32_t zllctrl_mainloop(hue_t *hue)
 
         /* wait for new message to processing */
         ret = mbox_pend(&g_hue_mbox, (uint32_t *)&huemail, 0);
+#if 0
         if(ret == ROK)
         {
             if(huemail.event == ZLL_EVENT_JSON)
@@ -397,6 +398,7 @@ static uint32_t zllctrl_mainloop(hue_t *hue)
                 uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "invalide event: %d\n", huemail.event);
             }
         }
+#endif
     }
 
     return 0;
