@@ -166,6 +166,20 @@ uint32_t hue_json_build_xy(char *out_buf, uint32_t in_len, uint16_t v)
 	return length;
 }
 
+// build both x and y
+uint32_t hue_json_build_x_y(char *out_buf, uint32_t in_len, uint16_t x, uint16_t y)
+{
+    uint32_t offset = 0;
+
+    offset += json_build_array_start(&out_buf[offset], in_len-offset);			//xy is an array
+	offset += hue_json_build_xy(&out_buf[offset], in_len-offset, x);
+	offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+	offset += hue_json_build_xy(&out_buf[offset], in_len-offset, y);
+	offset += json_build_array_end(&out_buf[offset], in_len-offset);
+
+	return offset;
+}
+
 uint32_t hue_json_build_light_state(char *out_buf, uint32_t in_len, hue_light_t *light)
 {
 	uint32_t offset = 0;

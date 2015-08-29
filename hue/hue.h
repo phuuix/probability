@@ -148,6 +148,8 @@ typedef struct hue_s
     uint8_t socbuf[SOC_MT_CMD_BUF_SIZ];    // store the MT response and indication
 }hue_t;
 
+/* hue mail macros */
+#define HUE_MAIL_CMD_TYPE_MASK 0x80      // indicate this is from console or not
 #define HUE_MAIL_CMD_GET_ALL_LIGHTS   0
 #define HUE_MAIL_CMD_GET_NEW_LIGHTS   1
 #define HUE_MAIL_CMD_SEACH_NEW_LIGHTS 2
@@ -155,6 +157,22 @@ typedef struct hue_s
 #define HUE_MAIL_CMD_RENAME_LIGHT     4
 #define HUE_MAIL_CMD_SET_ONE_LIGHT    5
 #define HUE_MAIL_CMD_DELETE_LIGHT     6
+
+/* hue light state bitmap */
+#define HUE_LIGHT_STATE_ON            0
+#define HUE_LIGHT_STATE_BRI           1
+#define HUE_LIGHT_STATE_HUE           2
+#define HUE_LIGHT_STATE_SAT           3
+#define HUE_LIGHT_STATE_XY            4
+#define HUE_LIGHT_STATE_CT            5
+#define HUE_LIGHT_STATE_ALERT         6
+#define HUE_LIGHT_STATE_EFFECT        7
+#define HUE_LIGHT_STATE_TIME          8
+#define HUE_LIGHT_STATE_BRIINC        9
+#define HUE_LIGHT_STATE_HUEINC        10
+#define HUE_LIGHT_STATE_SATINC        11
+#define HUE_LIGHT_STATE_XYINC         12
+#define HUE_LIGHT_STATE_CTINC         13
 
 typedef union hue_mail_s
 {
@@ -167,23 +185,22 @@ typedef union hue_mail_s
         uint8_t *unused;        // later will be a device ID list
     } search_new_lights;
 
-    struct // hue_mail_rename_light
-    {
-        uint8_t cmd;
-        uint8_t light;
-        uint16_t filler2;
-        uint8_t *username;
-        uint8_t *lightname;
-    } rename_light;
-
     struct // hue_mail_set_one_light
     {
         uint8_t cmd;
-        uint8_t light;
+        uint8_t light_id;
         uint16_t flags;          // flags indicate which field will be set
         uint8_t *username;
-        hue_light_t *state;
+        hue_light_t *light;
     } set_one_light;
+
+    struct // console command
+    {
+        uint8_t cmd;
+        uint8_t filler;
+        uint16_t length;
+        uint8_t *data;
+    } console;
 
     struct //
     {
@@ -192,7 +209,7 @@ typedef union hue_mail_s
         uint16_t filler2;
         uint8_t *username;
         uint8_t *data;
-    } hue_mail_cmd_common;
+    } common;
 }hue_mail_t;
 
 typedef struct zll_mail_s

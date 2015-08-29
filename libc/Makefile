@@ -4,11 +4,11 @@ PROJ_ROOTDIR = ..
 include $(PROJ_ROOTDIR)/config.mk
 
 # Please let $(ARCH) at first
-VPATH = $(ARCH):lib:libcruft
+VPATH = $(ARCH):lib:libcruft:libm
 
 S_FILES =
 S_OBJS =
-C_FILES = $(wildcard lib/*.c) $(wildcard libcruft/*.c)
+C_FILES = $(wildcard lib/*.c) $(wildcard libcruft/*.c) $(wildcard libm/*.c)
 C_OBJS = $(notdir $(C_FILES:.c=.o))
 
 

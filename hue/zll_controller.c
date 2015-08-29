@@ -17,8 +17,8 @@
 #include "zll_controller.h"
 #include "zllSocCmd.h"
 
-mbox_t g_hue_mbox;
-mbox_t g_zll_mbox;
+mbox_t g_hue_mbox;  // Rx message from HTTP or console
+mbox_t g_zll_mbox;  // Rx message from ZLL
 
 hue_t g_hue;
 ptimer_table_t g_zll_timer_table;
@@ -31,7 +31,7 @@ static char zll_task_stack[TZLL_STACK_SIZE];
 #define MAX_CONSOLE_CMD_LEN 128
 
 void commandUsage( void );
-void processConsoleCommand( char *cmdBuff );
+void zllctrl_process_console_command( char *cmdBuff );
 void getConsoleCommandParams(char* cmdBuff, uint16_t *nwkAddr, uint8_t *addrMode, uint8_t *ep, uint8_t *value, uint16_t *transitionTime);
 uint32_t getParam( char *cmdBuff, char *paramId, uint32_t *paramInt);
 uint8_t tlIndicationCb(epInfo_t *epInfo);
@@ -90,7 +90,18 @@ void commandUsage( void )
     uprintf_default("0xFE is the fully saturated color specified by the hue value\n");        
 }
 
-void processConsoleCommand( char *cmdBuff )
+int zllctrl_post_console_command(char *command)
+{
+    hue_mail_t huemail;
+
+    huemail.console.cmd = 0;
+    huemail.console.length = strlen(command);
+    huemail.console.data = (uint8_t *)command;
+
+    return mbox_post(&g_hue_mbox, (uint32_t *)&huemail);
+}
+
+void zllctrl_process_console_command( char *cmdBuff )
 {
   // char cmdBuff[MAX_CONSOLE_CMD_LEN];
   uint16_t nwkAddr;
@@ -339,14 +350,149 @@ uint8_t newDevIndicationCb(epInfo_t *epInfo)
   return 0;
 }
 
-uint32_t zllctrl_process_json_message(hue_t *hue, uint8_t *data, uint16_t length)
+uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
 {
-    return 0;
+    uint32_t ret = 0;
+    uint16_t bitmap = huemail->set_one_light.flags;
+    uint16_t dstAddr;
+    uint16_t time;
+    uint8_t endpoint;
+    uint8_t addrMode = 0; // unicast
+    hue_light_t *light, *newlight;
+    uint8_t cmdbuf[64];
+
+    if(huemail->set_one_light.light_id >= gNumHueLight)
+    {
+        uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unknown light: %d\n", huemail->set_one_light.light_id);
+        return -1;
+    }
+
+    light = &gHueLight[huemail->set_one_light.light_id];
+    newlight = huemail->set_one_light.light;
+    
+    // update transition time first
+    if(bitmap & (1<<HUE_LIGHT_STATE_TIME))
+    {
+        light->transitiontime = newlight->transitiontime;
+    }
+
+    if(light->reachable == 0)
+        return -1;
+
+    time = light->transitiontime;
+    dstAddr = light->zig_addr.network_addr;
+    endpoint = light->zig_addr.endpoint;
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_ON))
+    {
+        zllSocSetState(cmdbuf, newlight->on, dstAddr, endpoint, addrMode);
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_BRI))
+    {
+        zllSocSetLevel(cmdbuf, newlight->bri, time, dstAddr, endpoint, addrMode);
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_HUE))
+    {
+        // TI hue is 8 bits but philips is 16 bits
+        zllSocSetHue(cmdbuf, newlight->hue, time, dstAddr, endpoint, addrMode);
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_SAT))
+    {
+        zllSocSetSat(cmdbuf, newlight->sat, time, dstAddr, endpoint, addrMode);
+    }
+    
+    if(bitmap & (1<<HUE_LIGHT_STATE_XY))
+    {
+        zllSocSetColor(cmdbuf, newlight->x, newlight->y, time, dstAddr, endpoint, addrMode);
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_CT))
+    {
+        uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unsupported hue state: ct\n");
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_ALERT))
+    {
+        uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unsupported hue state: alert\n");
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_EFFECT))
+    {
+        uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unsupported hue state: effect\n");
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_BRIINC))
+    {
+        zllSocSetLevel(cmdbuf, light->bri + newlight->bri, time, dstAddr, endpoint, addrMode);
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_HUEINC))
+    {
+        zllSocSetHue(cmdbuf, light->hue + newlight->hue, time, dstAddr, endpoint, addrMode);
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_SATINC))
+    {
+        zllSocSetSat(cmdbuf, light->sat + newlight->sat, time, dstAddr, endpoint, addrMode);
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_XYINC))
+    {
+        zllSocSetColor(cmdbuf, light->x+newlight->x, light->y+newlight->y, time, dstAddr, endpoint, addrMode);
+    }
+
+    if(bitmap & (1<<HUE_LIGHT_STATE_CTINC))
+    {
+        uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unsupported hue state: ctinc\n");
+    }
+
+    return ret;
+}
+
+uint32_t zllctrl_process_json_search_lights(hue_t *hue, hue_mail_t *huemail)
+{
+    uint32_t ret = 0;
+    uint8_t cmdbuf[64];
+    
+    /* issue a touch link command?? */
+    zllSocTouchLink(cmdbuf);
+
+    return ret;
+}
+
+uint32_t zllctrl_process_json_message(hue_t *hue, hue_mail_t *huemail)
+{
+    uint32_t ret = 0;
+
+    switch(huemail->common.cmd)
+    {
+        case HUE_MAIL_CMD_SET_ONE_LIGHT:
+            ret = zllctrl_process_json_set_light(hue, huemail);
+            break;
+
+        case HUE_MAIL_CMD_SEACH_NEW_LIGHTS:
+            ret = zllctrl_process_json_search_lights(hue, huemail);
+            break;
+
+        default:
+            ret = -1;
+            uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unsupported hue command: %d\n", huemail->common.cmd);
+            break;
+    }
+
+    if(huemail->common.data)
+        free(huemail->common.data);
+
+    return ret;
 }
 
 static uint32_t zllctrl_mainloop(hue_t *hue)
 {
     hue_mail_t huemail;
+    zll_mail_t zllmail;
     int ret;
     uint32_t t1, t2;
 
@@ -362,43 +508,30 @@ static uint32_t zllctrl_mainloop(hue_t *hue)
             t1 = t2;
         }
 
-        /* wait for new message to processing */
+        /* wait for hue or console message to processing */
         ret = mbox_pend(&g_hue_mbox, (uint32_t *)&huemail, 0);
-#if 0
         if(ret == ROK)
         {
-            if(huemail.event == ZLL_EVENT_JSON)
-            {
-                /* process requests from hue */
-                zllctrl_process_json_message(hue, huemail.data, huemail.length);
-				free(huemail.data);
-            }
-            else if(huemail.event == ZLL_EVENT_CONSOLE)
+            if(huemail.common.cmd & HUE_MAIL_CMD_TYPE_MASK)
             {
                 /* process requests from console */
-                processConsoleCommand((char *)huemail.data);
-				free(huemail.data);
-            }
-			else
-				uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unknown hue event: %d\n", huemail.event);
-        }
-
-        /* wait for response and indication from soc */
-        ret = mbox_pend(&g_zll_mbox, (uint32_t *)&huemail, 2);
-        if(ret == ROK)
-        {
-            if(huemail.event == ZLL_EVENT_SOC)
-            {
-                /* process messages from zigbee device */
-                zllctrl_process_soc_message(hue, huemail.data, huemail.length);
+                zllctrl_process_console_command((char *)huemail.console.data);
+				free(huemail.console.data);
             }
             else
             {
-                /* invalid event */
-                uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "invalide event: %d\n", huemail.event);
+                /* process requests from hue */
+                zllctrl_process_json_message(hue, &huemail);
             }
         }
-#endif
+
+        /* wait for response and indication from soc */
+        ret = mbox_pend(&g_zll_mbox, (uint32_t *)&zllmail, 2);
+        if(ret == ROK)
+        {
+            /* process messages from zigbee device */
+            zllctrl_process_soc_message(hue, zllmail.data, zllmail.length);
+        }
     }
 
     return 0;
@@ -484,9 +617,36 @@ int zllctrl_on_get_light_on_off(uint16_t nwkAddr, uint8_t endpoint, uint8_t stat
     return 0;
 }
 
+/* interface provided to low level for indicating a new zll message */
+int zllctrl_post_zll_message(uint8_t *message, uint16_t length)
+{
+    uint8_t *rpcmsg = NULL;
+    int ret = 0;
+    zll_mail_t zllmail;
+
+    rpcmsg = malloc(length);
+    if(rpcmsg)
+    {
+        memcpy(rpcmsg, message, length);
+
+        zllmail.event = 0;
+        zllmail.flags = 0;
+        zllmail.data = rpcmsg;
+        zllmail.length = length;
+
+        ret = mbox_post(&g_zll_mbox, (uint32_t *)&zllmail);
+    }
+    else
+        ret = -1;
+    
+    return ret;
+}
+
 int zllctrl_process_soc_message(hue_t *hue, uint8_t *data, uint16_t length)
 {
     zllSocProcessRpc(data, length);
+    if(data)
+        free(data);
 
     return 0;
 }

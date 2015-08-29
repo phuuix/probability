@@ -11,6 +11,7 @@
 #include "uprintf.h"
 #include "siprintf.h"
 #include "journal.h"
+#include "assert.h"
 
 /* all commands:
  * i: show tasks
@@ -184,10 +185,10 @@ int cmd_toggle_trace(struct shell_session *ss, int argc, char **argv)
 	return 0;
 }
 
-extern void processConsoleCommand( char *cmdBuff );
+extern void zllctrl_post_console_command( char *cmdBuff );
 int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 {
-	char commands[128];
+	char *commands;
 	uint8_t i, n=0, l;
 
 	if(argc < 2)
@@ -195,6 +196,9 @@ int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 		ss->output("no parameters\n");
 		return 0;
 	}
+
+    commands = malloc(128);
+    assert(commands);
 
 	for(i=1; i<argc; i++)
 	{
@@ -204,7 +208,7 @@ int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 
 	ss->output("Zigbee commands: %s\n", commands);
 	
-	processConsoleCommand(commands);
+	zllctrl_post_console_command(commands);
 	
 	return 0;
 }

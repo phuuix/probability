@@ -246,7 +246,7 @@ void interrupt_init()
 	NVIC_SetPriorityGrouping(0x07);
 
 	/* set PENDSV's priority to highest */
-	NVIC_SetPriority(PendSV_IRQn, 0); // set prio to 0 will fault, why?
+	NVIC_SetPriority(PendSV_IRQn, 15); // set prio to 0 will fault, why?
 
 	/* set SysTick's priority to lowest */
 	NVIC_SetPriority(SysTick_IRQn, 15);

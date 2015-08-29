@@ -450,7 +450,8 @@ void usbh_usr_cdc_rxdone(CDC_Machine_TypeDef *pCDC_Machine, uint8_t *RxBuffer, u
 	else
 	{
 		/* Rx real done, notify high layer */
-		zllSocProcessRpc(pCDC_Machine->RxBuffer, RxBuffer[1]+4);
+        zllctrl_post_zll_message(pCDC_Machine->RxBuffer, RxBuffer[1]+4);
+		//zllSocProcessRpc(pCDC_Machine->RxBuffer, RxBuffer[1]+4);
 		pCDC_Machine->RxDataLength = 0;
 		pCDC_Machine->RxDataOffset = 0;
 		*(uint32_t *)pCDC_Machine->RxBuffer = 0;

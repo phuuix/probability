@@ -9,10 +9,6 @@
 #define HUE_MBOX_SIZE 16
 #define ZLL_MBOX_SIZE 16
 
-/* event type definition */
-#define ZLL_EVENT_JSON 1
-#define ZLL_EVENT_CONSOLE 2
-#define ZLL_EVENT_SOC 3
 
 /* timeout before response is back: 500ms */
 #define ZLL_RESP_DEFAULT_TIMEOUT 50

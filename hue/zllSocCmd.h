@@ -91,6 +91,7 @@ uint32_t zllSocSetState(uint8_t *cmbbuf, uint8_t state, uint16_t dstAddr, uint8_
 uint32_t zllSocSetLevel(uint8_t *cmbbuf, uint8_t level, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
 uint32_t zllSocSetHue(uint8_t *cmbbuf, uint8_t hue, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
 uint32_t zllSocSetSat(uint8_t *cmbbuf, uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t  endpoint, uint8_t addrMode);
+uint32_t zllSocSetColor(uint8_t *cmbbuf, uint16_t x, uint16_t y, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
 uint32_t zllSocSetHueSat(uint8_t *cmbbuf, uint8_t hue, uint8_t sat, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
 uint32_t zllSocAddGroup(uint8_t *cmbbuf, uint16_t groupId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
 uint32_t zllSocStoreScene(uint8_t *cmbbuf, uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
