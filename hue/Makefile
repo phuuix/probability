@@ -7,7 +7,7 @@ VPATH = $(ARCH):lib
 
 S_FILES =
 S_OBJS =
-C_FILES = httpserver-netconn.c hue.c zll_controller.c zllSocCmd.c cJSON.c hue_json_builder.c http_parser.c
+C_FILES = httpserver-netconn.c hue.c zll_controller.c zllSocCmd.c cJSON.c hue_json_builder.c http_parser.c ssdp.c
 C_OBJS = $(notdir $(C_FILES:.c=.o))
 
 

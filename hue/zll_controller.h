@@ -20,5 +20,9 @@ int zllctrl_on_get_light_sat(uint16_t nwkAddr, uint8_t endpoint, uint8_t sat);
 int zllctrl_on_get_light_hue(uint16_t nwkAddr, uint8_t endpoint, uint8_t hue);
 int zllctrl_on_get_light_level(uint16_t nwkAddr, uint8_t endpoint, uint8_t level);
 int zllctrl_on_get_light_on_off(uint16_t nwkAddr, uint8_t endpoint, uint8_t state);
+uint8_t zllctrl_process_touchlink_indication(epInfo_t *epInfo);
+uint8_t zllctrl_process_newdev_indication(epInfo_t *epInfo);
+hue_light_t *zllctrl_create_light(epInfo_t *epInfo);
+hue_light_t *zllctrl_find_light_by_addr(uint16_t nwkAddr, uint8_t endpoint);
 
 #endif

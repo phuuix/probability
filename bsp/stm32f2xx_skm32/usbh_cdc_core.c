@@ -310,7 +310,7 @@ void usbh_cdc_set_event(CDC_Machine_TypeDef *pCDC_Machine, uint8_t event)
 {
 	if(pCDC_Machine->event != event)
 	{
-		uprintf_default("USBH CDC new event %d\n", event);
+		//uprintf_default("USBH CDC new event %d\n", event);
 		pCDC_Machine->event = event;
 	}
 }
@@ -325,7 +325,7 @@ void usbh_cdc_action_tx(CDC_Machine_TypeDef *pCDC_Machine, USB_OTG_CORE_HANDLE *
 
 	if(dataLength > 0)
 	{
-		uprintf_default("usbh_cdc_action_tx: length=%d\n", dataLength);
+		//uprintf_default("usbh_cdc_action_tx: length=%d\n", dataLength);
 		USBH_BulkSendData (pdev,
 		                 &pCDC_Machine->TxBuffer[pCDC_Machine->TxDataOffset], 
 		                 dataLength , 

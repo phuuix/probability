@@ -48,7 +48,7 @@
 
 /* schedule flags */
 #define SCHEDULE_FLAGS_LOCK		0x01		/* lock schedule */
-#define SCHEDULE_FLAGS_DOING	0x02		/* schedule is doing */
+#define SCHEDULE_FLAGS_ONGOING	0x02		/* schedule is doing */
 
 /* get a task pointer from a delay pointer */
 #define DELAY_TO_TASK(d) \

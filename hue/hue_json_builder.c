@@ -700,14 +700,14 @@ uint32_t hue_json_build_create_user(char *out_buf, uint32_t in_len, uint8_t succ
 	offset += json_build_array_start(&out_buf[offset], in_len-offset);
 	offset += json_build_object_start(&out_buf[offset], in_len-offset);
 
-	offset += json_build_string(out_buf, in_len-offset, success?strHueSuccess:strHueFailure);
-	offset += json_build_char(out_buf, in_len-offset, ':');
+	offset += json_build_string(&out_buf[offset], in_len-offset, success?strHueSuccess:strHueFailure);
+	offset += json_build_char(&out_buf[offset], in_len-offset, ':');
 
 	// username object
 	offset += json_build_object_start(&out_buf[offset], in_len-offset);
-	offset += json_build_string(out_buf, in_len-offset, "username");
-	offset += json_build_char(out_buf, in_len-offset, ':');
-	offset += json_build_string(out_buf, in_len-offset, (const char *)username);
+	offset += json_build_string(&out_buf[offset], in_len-offset, "username");
+	offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+	offset += json_build_string(&out_buf[offset], in_len-offset, (const char *)username);
 	offset += json_build_object_end(&out_buf[offset], in_len-offset);
 		
 	offset += json_build_object_end(&out_buf[offset], in_len-offset);

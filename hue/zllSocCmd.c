@@ -134,7 +134,6 @@ len,   /*RPC payload Len                                      */     \
  * LOCAL VARIABLES
  */
 uint8_t transSeqNumber = 0;
-uint8_t zll_cdc_tx_buf[256];
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -179,12 +178,21 @@ extern int usbh_usr_cdc_txreq(uint8_t *buff, uint8_t length);
 int zllctrl_write(int zll_fd, uint8_t *cmd, uint16_t cmd_len)
 {
 	uint32_t mail[2];
+    int ret = -1;
+    uint8_t *tx_buf;
 
-	mail[0] = (/* CDC_MSG_TYPE_TXREQ */ 2 << 24) | (cmd_len << 16) | 0;
-	mail[1] = (uint32_t) zll_cdc_tx_buf;
-	memcpy(zll_cdc_tx_buf, cmd, cmd_len);
+    tx_buf = malloc(sizeof(cmd_len));
+    if(tx_buf)
+    {
+        memcpy(tx_buf, cmd, cmd_len);
+    	mail[0] = (/* CDC_MSG_TYPE_TXREQ */ 2 << 24) | (cmd_len << 16) | 0;
+    	mail[1] = (uint32_t) tx_buf;
+        ret = mbox_post(&cdc_mbox, mail);
+        if(ret != ROK)
+            free(tx_buf);
+	}
 
-	return mbox_post(&cdc_mbox, mail);
+	return ret;
 }
 
 
@@ -1437,7 +1445,7 @@ static void processRpcSysAppTlInd(uint8_t *TlIndBuff)
   epInfo.version = *TlIndBuff++;
   epInfo.status = *TlIndBuff++;
   
-  tlIndicationCb(&epInfo);
+  zllctrl_process_touchlink_indication(&epInfo);
 }        
 
 /*************************************************************************************************
@@ -1470,8 +1478,7 @@ static void processRpcSysAppNewDevInd(uint8_t *TlIndBuff)
     epInfo.IEEEAddr[i] = *TlIndBuff++;
   }
   
-  uprintf_default("processRpcSysAppNewDevInd: %x:%x\n",  epInfo.nwkAddr, epInfo.endpoint);
-  newDevIndicationCb(&epInfo);
+  zllctrl_process_newdev_indication(&epInfo);
 }
 
 /*************************************************************************************************
@@ -1673,7 +1680,9 @@ static void processRpcSysZdo(uint8_t *rpcBuff)
   if(rpcBuff[1] == MT_ZDO_END_DEVICE_ANNCE_IND) 
   {
   	addr = *(uint16_t *)&rpcBuff[4];
-  	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: device announce ind, nwkAddr=0x%x\n", addr);
+  	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: device announce ind, srcAddr=0x%x nwkAddr=0x%x IEEEAddr=0x%08x%08x\n", 
+        *(uint16_t *)&rpcBuff[2], addr, *(uint32_t *)&rpcBuff[6], *(uint32_t *)&rpcBuff[10]);
+    // TODO: to fetch this device's info
   }
   else if(rpcBuff[1] == MT_ZDO_IEEE_ADDR_RSP)
   {

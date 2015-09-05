@@ -39,7 +39,7 @@ extern void kservice_init();
 extern void lwip_sys_init();
 extern void lwip_perf_init();
 extern void ETH_BSP_Config(void);
-
+extern void http_server_netconn_init();
 extern void usbh_cdc_init();
 
 #ifdef INCLUDE_USER_APP_INIT

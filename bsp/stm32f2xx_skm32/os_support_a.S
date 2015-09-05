@@ -33,9 +33,16 @@ bsp_frestore:
  * void bsp_task_switch(uint32_t from, uint32_t to);
  * r0 --> from
  * r1 --> to
+ * r2, r3 --> free use in arm
  */
 .globl bsp_task_switch
 bsp_task_switch:
+/*
+	ldr	r3,=sysschedule_flags   @ set SCHEDULE_FLAGS_ONGOING
+	ldr	r2, [r3, #0]
+	orr.w	r2, r2, #2
+	str	r2, [r3, #0]
+*/
 	ldr r2,=interrupt_from_task	@ set interrupt_from_task
 	str r0, [r2]
 	ldr r2,=interrupt_to_task	@ set interrupt_to_task
@@ -53,6 +60,12 @@ bsp_task_switch:
 .globl interrupt_to_task
 .globl bsp_task_switch_interrupt
 bsp_task_switch_interrupt:
+/*
+	ldr	r3,=sysschedule_flags   @ set SCHEDULE_FLAGS_ONGOING
+	ldr	r2, [r3, #0]
+	orr.w	r2, r2, #2
+	str	r2, [r3, #0]
+*/
 	ldr r2,=interrupt_from_task	@ set interrupt_from_task
 	str r0, [r2]
 	ldr r2,=interrupt_to_task	@ set interrupt_to_task

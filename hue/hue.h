@@ -4,6 +4,7 @@
 #define _HUE_H_
 
 #include <inttypes.h>
+#include "zllSocCmd.h"
 
 #define UPRINT_BLK_HUE 6
 
@@ -62,9 +63,36 @@ typedef struct zigbee_addr
     uint8_t endpoint;
 }zigbee_addr_t;
 
+/*
+The alert effect, which is a temporary change to the bulb's state. This can take one of the following values:
+"none" - The light is not performing an alert effect.
+"select" - The light is performing one breathe cycle.
+"lselect" - The light is performing breathe cycles for 30 seconds or until an "alert": "none" command is received.
+*/
+#define HUE_LIGHT_ALERT_NONE 0
+#define HUE_LIGHT_ALERT_SELECT 1
+#define HUE_LIGHT_ALERT_LSELECT 2
+
+/*
+The dynamic effect of the light, can either be "none" or "colorloop".
+If set to colorloop, the light will cycle through all hues using the current brightness and saturation settings.
+*/
+#define HUE_LIGHT_EFFECT_NONE 0
+#define HUE_LIGHT_EFFECT_COLORLOOP 1
+
+/*
+Indicates the color mode in which the light is working, this is the last command type it received. 
+Values are "hs" for Hue and Saturation, "xy" for XY and "ct" for Color Temperature. 
+This parameter is only present when the light supports at least one of the values.
+*/
+#define HUE_LIGHT_COLORMODE_NONE 0
+#define HUE_LIGHT_COLORMODE_HS 1
+#define HUE_LIGHT_COLORMODE_XY 2
+#define HUE_LIGHT_COLORMODE_CT 3
+
 typedef struct hue_light
 {
-    zigbee_addr_t zig_addr; // address of light
+    epInfo_t ep_info;
 
 	uint8_t id;
 	uint8_t on:1;			//On/Off state of the light
@@ -75,26 +103,17 @@ The alert effect, which is a temporary change to the bulb's state. This can take
 "select" - The light is performing one breathe cycle.
 "lselect" - The light is performing breathe cycles for 30 seconds or until an "alert": "none" command is received.
 */
- #define HUE_LIGHT_ALERT_NONE 0
- #define HUE_LIGHT_ALERT_SELECT 1
- #define HUE_LIGHT_ALERT_LSELECT 2
 	uint8_t alert:2;
 /*
 The dynamic effect of the light, can either be "none" or "colorloop".
 If set to colorloop, the light will cycle through all hues using the current brightness and saturation settings.
 */
-#define HUE_LIGHT_EFFECT_NONE 0
-#define HUE_LIGHT_EFFECT_COLORLOOP 1
 	uint8_t effect:1;
 /*
 Indicates the color mode in which the light is working, this is the last command type it received. 
 Values are "hs" for Hue and Saturation, "xy" for XY and "ct" for Color Temperature. 
 This parameter is only present when the light supports at least one of the values.
 */
-#define HUE_LIGHT_COLORMODE_NONE 0
-#define HUE_LIGHT_COLORMODE_HS 1
-#define HUE_LIGHT_COLORMODE_XY 2
-#define HUE_LIGHT_COLORMODE_CT 3
 	uint8_t colormode:2;
 	
 	uint8_t bri;			//Brightness of the light. Note a brightness of 0 is not off
@@ -227,4 +246,14 @@ extern hue_light_t gHueLight[HUE_MAX_LIGHTS];
 extern hue_user_t gHueUser[HUE_MAX_USERS];
 extern uint16_t gNumHueLight;
 extern uint16_t gNumHueUser;
+
+hue_light_t *hue_find_light_by_id(uint8_t in_light_id);
+int process_hue_api_get_all_lights(char *out_responseBuf, uint32_t in_max_resp_size);
+int process_hue_api_get_new_lights(char *out_responseBuf, uint32_t in_max_resp_size);
+int process_hue_api_search_new_lights(char *out_responseBuf, uint32_t in_max_resp_size);
+int process_hue_api_get_light_attr_state(uint16_t in_light_id, char *out_responseBuf, uint32_t in_max_resp_size);
+int process_hue_api_rename_light(uint16_t in_light_id, char *newname, char *out_responseBuf, uint32_t in_max_resp_size);
+int process_hue_api_set_light_state(uint16_t in_light_id, hue_light_t *in_light, uint32_t in_bitmap, char *out_responseBuf, uint32_t in_max_resp_size);
+int process_hue_api_create_user(char *devType, char *userName, char *responseBuf, uint32_t size);
+
 #endif //_HUE_H_

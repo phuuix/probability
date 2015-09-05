@@ -285,7 +285,7 @@ void free(void *p)
 #endif // INCLUDE_JOURNAL
 	}
 	else
-		kprintf("error: invalid pointer for free: addr=%p task=%s\n", p, current->name);
+		kprintf("error: invalid pointer for free: addr=0x%x task=%s\n", p, current->name);
 }
 
 #endif /* MEMORY_ADVANCE */

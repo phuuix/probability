@@ -16,6 +16,7 @@
 #include "hue.h"
 #include "zll_controller.h"
 #include "zllSocCmd.h"
+#include "zcl_ll.h"
 
 mbox_t g_hue_mbox;  // Rx message from HTTP or console
 mbox_t g_zll_mbox;  // Rx message from ZLL
@@ -34,8 +35,8 @@ void commandUsage( void );
 void zllctrl_process_console_command( char *cmdBuff );
 void getConsoleCommandParams(char* cmdBuff, uint16_t *nwkAddr, uint8_t *addrMode, uint8_t *ep, uint8_t *value, uint16_t *transitionTime);
 uint32_t getParam( char *cmdBuff, char *paramId, uint32_t *paramInt);
-uint8_t tlIndicationCb(epInfo_t *epInfo);
-uint8_t newDevIndicationCb(epInfo_t *epInfo);
+
+extern int ssdp_init();
 
 static uint16_t savedNwkAddr;    
 static uint8_t savedAddrMode;    
@@ -94,7 +95,7 @@ int zllctrl_post_console_command(char *command)
 {
     hue_mail_t huemail;
 
-    huemail.console.cmd = 0;
+    huemail.console.cmd = HUE_MAIL_CMD_TYPE_MASK;
     huemail.console.length = strlen(command);
     huemail.console.data = (uint8_t *)command;
 
@@ -316,37 +317,69 @@ hue_t *zllctrl_get_hue()
 	return &g_hue;
 }
 
-uint8_t tlIndicationCb(epInfo_t *epInfo)
+uint8_t zllctrl_process_touchlink_indication(epInfo_t *epInfo)
 {
-  uprintf_default("\ntlIndicationCb:\n    Network Addr : 0x%04x\n    End Point    : 0x%02x\n    Profile ID   : 0x%04x\n",
+  hue_light_t *light;
+
+  uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "\ntlIndicationCb:\n    Network Addr : 0x%04x\n    End Point    : 0x%02x\n    Profile ID   : 0x%04x\n",
     epInfo->nwkAddr, epInfo->endpoint, epInfo->profileID);
-  uprintf_default("    Device ID    : 0x%04x\n    Version      : 0x%02x\n    Status       : 0x%02x\n\n", 
+  uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "    Device ID    : 0x%04x\n    Version      : 0x%02x\n    Status       : 0x%02x\n\n", 
      epInfo->deviceID, epInfo->version, epInfo->status); 
      
- //control this device by default
- savedNwkAddr =  epInfo->nwkAddr; 
- savedEp = epInfo->endpoint;
+  //control this device by default
+  savedNwkAddr =  epInfo->nwkAddr; 
+  savedEp = epInfo->endpoint;
 
-  /* TODO: add the new device to light list... */
-  /* TODO: get state of new light */
+  /* add the new device to light list... */
+  light = zllctrl_find_light_by_addr(epInfo->nwkAddr, epInfo->endpoint);
+  if(light == NULL)
+  {
+    light = zllctrl_create_light(epInfo);
+    
+    /* TODO: get state of new light */
+  }
+
+  if(light != NULL)
+  {
+    light->reachable = 1;
+  }
   
   return 0;
 }
 
-uint8_t newDevIndicationCb(epInfo_t *epInfo)
+uint8_t zllctrl_process_newdev_indication(epInfo_t *epInfo)
 {
-  uprintf_default("\ntlIndicationCb:\n    Network Addr : 0x%04x\n    End Point    : 0x%02x\n    Profile ID   : 0x%04x\n",
+  hue_light_t *light;
+
+  uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "\nnewDevIndicationCb:\n    Network Addr : 0x%04x\n    End Point    : 0x%02x\n    Profile ID   : 0x%04x\n",
     epInfo->nwkAddr, epInfo->endpoint, epInfo->profileID);
-  uprintf_default("    Device ID    : 0x%04x\n    Version      : 0x%02x\n    Status       : 0x%02x\n", 
+  uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "    Device ID    : 0x%04x\n    Version      : 0x%02x\n    Status       : 0x%02x\n", 
      epInfo->deviceID, epInfo->version, epInfo->status);
-  uprintf_default("    IEEE Addr    : 0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:\n\n\n", 
+  uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "    IEEE Addr    : 0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:\n\n\n", 
      epInfo->IEEEAddr[0], epInfo->IEEEAddr[1], epInfo->IEEEAddr[2], epInfo->IEEEAddr[3], 
      epInfo->IEEEAddr[4], epInfo->IEEEAddr[5], epInfo->IEEEAddr[6], epInfo->IEEEAddr[7]);      
      
- //control this device by default
- savedNwkAddr =  epInfo->nwkAddr; 
- savedEp = epInfo->endpoint;
+  //control this device by default
+  savedNwkAddr =  epInfo->nwkAddr; 
+  savedEp = epInfo->endpoint;
    
+  if(epInfo->profileID == ZLL_PROFILE_ID)
+  {
+    /* add the new device to light list... */
+    light = zllctrl_find_light_by_addr(epInfo->nwkAddr, epInfo->endpoint);
+    if(light == NULL)
+    {
+      light = zllctrl_create_light(epInfo);
+
+      /* TODO: get state of new light */
+    }
+
+    if(light != NULL)
+    {
+      light->reachable = 1;
+    }
+  }
+  
   return 0;
 }
 
@@ -357,19 +390,19 @@ uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
     uint16_t dstAddr;
     uint16_t time;
     uint8_t endpoint;
-    uint8_t addrMode = 0; // unicast
+    uint8_t addrMode = 2; //short address // unicast
     hue_light_t *light, *newlight;
     uint8_t cmdbuf[64];
 
-    if(huemail->set_one_light.light_id >= gNumHueLight)
+    light = hue_find_light_by_id(huemail->set_one_light.light_id);
+    if(light == NULL)
     {
         uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unknown light: %d\n", huemail->set_one_light.light_id);
         return -1;
     }
 
-    light = &gHueLight[huemail->set_one_light.light_id];
     newlight = huemail->set_one_light.light;
-    
+        
     // update transition time first
     if(bitmap & (1<<HUE_LIGHT_STATE_TIME))
     {
@@ -377,11 +410,17 @@ uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
     }
 
     if(light->reachable == 0)
+    {
+        uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "light is unreachable: %d\n", huemail->set_one_light.light_id);
         return -1;
+    }
 
     time = light->transitiontime;
-    dstAddr = light->zig_addr.network_addr;
-    endpoint = light->zig_addr.endpoint;
+    dstAddr = light->ep_info.nwkAddr;
+    endpoint = light->ep_info.endpoint;
+
+    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "set light, dstAddr=0x%x endpoint=0x%x bipmap=0x%x\n", 
+            dstAddr, endpoint, bitmap);
 
     if(bitmap & (1<<HUE_LIGHT_STATE_ON))
     {
@@ -455,10 +494,11 @@ uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
 uint32_t zllctrl_process_json_search_lights(hue_t *hue, hue_mail_t *huemail)
 {
     uint32_t ret = 0;
-    uint8_t cmdbuf[64];
+    //uint8_t cmdbuf[64];
     
-    /* issue a touch link command?? */
-    zllSocTouchLink(cmdbuf);
+    /* issue a touch link command */
+    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "touchlink ...\n");
+    zllSocTouchLink(NULL);
 
     return ret;
 }
@@ -488,6 +528,7 @@ uint32_t zllctrl_process_json_message(hue_t *hue, hue_mail_t *huemail)
 
     return ret;
 }
+
 
 static uint32_t zllctrl_mainloop(hue_t *hue)
 {
@@ -537,14 +578,14 @@ static uint32_t zllctrl_mainloop(hue_t *hue)
     return 0;
 }
 
-hue_light_t *zllctrl_find_light(uint16_t nwkAddr, uint8_t endpoint)
+hue_light_t *zllctrl_find_light_by_addr(uint16_t nwkAddr, uint8_t endpoint)
 {
     int i;
     hue_light_t *light = NULL;
 
     for(i=0; i<gNumHueLight; i++)
     {
-        if(gHueLight[i].zig_addr.network_addr == nwkAddr && gHueLight[i].zig_addr.endpoint == endpoint)
+        if(gHueLight[i].ep_info.nwkAddr == nwkAddr && gHueLight[i].ep_info.endpoint == endpoint)
         {
             light = &gHueLight[i];
             break;
@@ -554,11 +595,30 @@ hue_light_t *zllctrl_find_light(uint16_t nwkAddr, uint8_t endpoint)
     return light;
 }
 
+hue_light_t *zllctrl_create_light(epInfo_t *epInfo)
+{
+    hue_light_t *light = NULL;
+
+    if(gNumHueLight < HUE_MAX_LIGHTS)
+    {
+        light = &gHueLight[gNumHueLight];
+        light->ep_info = *epInfo;
+        gNumHueLight ++;
+    }
+    else
+    {
+        uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "create light failed: nwkAddr=0x%x endpoint=0x%x\n",
+            epInfo->nwkAddr, epInfo->endpoint);
+    }
+
+    return light;
+}
+
 int zllctrl_on_get_light_sat(uint16_t nwkAddr, uint8_t endpoint, uint8_t sat)
 {
     hue_light_t *light;
 
-    light = (hue_light_t *)zllctrl_find_light(nwkAddr, endpoint);
+    light = (hue_light_t *)zllctrl_find_light_by_addr(nwkAddr, endpoint);
     if(light)
     {
          uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "Network Addr: 0x%04x End Point: 0x%02x Saturation: %02x\n", 
@@ -574,7 +634,7 @@ int zllctrl_on_get_light_hue(uint16_t nwkAddr, uint8_t endpoint, uint8_t hue)
 {
     hue_light_t *light;
 
-    light = (hue_light_t *)zllctrl_find_light(nwkAddr, endpoint);
+    light = (hue_light_t *)zllctrl_find_light_by_addr(nwkAddr, endpoint);
     if(light)
     {
         uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "Network Addr: 0x%04x End Point: 0x%02x Hue: %02x\n", 
@@ -590,7 +650,7 @@ int zllctrl_on_get_light_level(uint16_t nwkAddr, uint8_t endpoint, uint8_t level
 {
     hue_light_t *light;
 
-    light = (hue_light_t *)zllctrl_find_light(nwkAddr, endpoint);
+    light = (hue_light_t *)zllctrl_find_light_by_addr(nwkAddr, endpoint);
     if(light)
     {
         uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "Network Addr: 0x%04x End Point: 0x%02x brightless: %02x\n", 
@@ -606,7 +666,7 @@ int zllctrl_on_get_light_on_off(uint16_t nwkAddr, uint8_t endpoint, uint8_t stat
 {
     hue_light_t *light;
 
-    light = (hue_light_t *)zllctrl_find_light(nwkAddr, endpoint);
+    light = (hue_light_t *)zllctrl_find_light_by_addr(nwkAddr, endpoint);
     if(light)
     {
         uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "Network Addr: 0x%04x End Point: 0x%02x on: %02x\n", 
@@ -644,6 +704,8 @@ int zllctrl_post_zll_message(uint8_t *message, uint16_t length)
 
 int zllctrl_process_soc_message(hue_t *hue, uint8_t *data, uint16_t length)
 {
+	/* copy soc message */
+	memcpy(hue->socbuf, data, length);
     zllSocProcessRpc(data, length);
     if(data)
         free(data);
@@ -673,6 +735,8 @@ uint32_t zllctrl_start_soc_eventloop(uint32_t deadline, hue_t *hue, uint32_t (*e
                 if(endCode != RTIMEOUT)
                     break;
             }
+            else
+                endCode = ROK;
     	}
 
         /* process timers */
@@ -696,7 +760,7 @@ static uint32_t zllsoc_is_sysversion_processed(hue_t *hue, uint8_t *data, uint32
 
 static uint32_t zllsoc_is_devinfo_processed(hue_t *hue, uint8_t *data, uint32_t length)
 {
-	return RTIMEOUT;
+	return ROK;
 }
 
 /* establish the connection to soc */
@@ -762,6 +826,15 @@ static void zllctrl_task(void *p)
 	hue_t *hue;
 	uint32_t ret;
 
+	uprintf_set_enable(UPRINT_INFO, UPRINT_BLK_HUE, 1);
+	uprintf_set_enable(UPRINT_DEBUG, UPRINT_BLK_HUE, 1);
+	
+    // for debug
+    hue_light_1_create();
+
+	// delay 3s to wait other is up
+	task_delay(3*100);
+	
 	hue = (hue_t *)p;
 	zllctrl_set_state(hue, HUE_STATE_INIT);
 	
@@ -789,6 +862,8 @@ static void zllctrl_task(void *p)
 
     zllctrl_set_state(hue, HUE_STATE_NETSETUP);
 
+    ssdp_init();
+   
 	zllctrl_mainloop(hue);
 }
 
@@ -813,4 +888,6 @@ int zllctrl_init()
 	task_resume_noschedule(t);
 	return 0;
 }
+
+
 

@@ -63,7 +63,7 @@ int http_strip_chars(char *in_buf, char *c)
 int http_parse_content_type(char *in_buf, uint16_t length)
 {
 	int offset = 0;
-	int type = HTTP_CONTENTTYPE_UNKNOW;
+	int type = HTTP_CONTENTTYPE_JSON;
 
 	// strip leading blanks
 	offset = http_strip_chars(in_buf, " ");
@@ -127,7 +127,7 @@ int http_parse_request_headers(char *in_buf, uint16_t length, http_parser_t *par
 	char *next_line = NULL, *line, *header, *value;
 
 	parser->content_len = 0;
-	parser->content_type = 0;
+	parser->content_type = HTTP_CONTENTTYPE_JSON;
 
 	line = in_buf;
 	/* parser one line every loop */
@@ -187,6 +187,7 @@ int http_parse_request_body(char *in_buf, uint16_t length, http_parser_t *parser
 	if(length)
 	{
 		parser->content = in_buf;
+        parser->content[length] = 0; // terminate string
 	}
 	else
 		parser->content = NULL;

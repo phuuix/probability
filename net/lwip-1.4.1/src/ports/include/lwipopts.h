@@ -75,7 +75,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define MEMP_NUM_TCP_SEG        12
 /* MEMP_NUM_SYS_TIMEOUT: the number of simulateously active
    timeouts. */
-#define MEMP_NUM_SYS_TIMEOUT    5
+#define MEMP_NUM_SYS_TIMEOUT    6
 
 
 /* ---------- Pbuf options ---------- */
@@ -112,6 +112,8 @@ a lot of data that needs to be copied, this should be set high. */
 /* ---------- ICMP options ---------- */
 #define LWIP_ICMP                       1
 
+/* ---------- IGMP options ---------- */
+#define LWIP_IGMP                       1
 
 /* ---------- DHCP options ---------- */
 /* Define LWIP_DHCP to 1 if you want DHCP configuration of
@@ -194,6 +196,7 @@ The STM32F2x7 allows computing and verifying the IP, UDP, TCP and ICMP checksums
  */
 #define LWIP_SOCKET                     0
 
+#define LWIP_RAND() rand()
 
 /*
    ----------------------------------------

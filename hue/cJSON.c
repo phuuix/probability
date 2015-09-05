@@ -97,18 +97,54 @@ void cJSON_Delete(cJSON *c)
 /* Parse the input text to generate a number, and populate the result into item. */
 static const char *parse_number(cJSON *item,const char *num)
 {
-	double n=0,sign=1,scale=0;int subscale=0,signsubscale=1;
+	double n=0;
+    short sign=1,scale=0;
+    short subscale=0,signsubscale=1;
+    short totalscale;
 
 	if (*num=='-') sign=-1,num++;	/* Has sign? */
 	if (*num=='0') num++;			/* is zero */
-	if (*num>='1' && *num<='9')	do	n=(n*10.0)+(*num++ -'0');	while (*num>='0' && *num<='9');	/* Number? */
-	if (*num=='.' && num[1]>='0' && num[1]<='9') {num++;		do	n=(n*10.0)+(*num++ -'0'),scale--; while (*num>='0' && *num<='9');}	/* Fractional part? */
+	if (*num>='1' && *num<='9')	
+    {
+        do{
+            n=(n*10.0)+(*num++ -'0');
+        }while (*num>='0' && *num<='9');
+    }	/* Number? */
+	if (*num=='.' && num[1]>='0' && num[1]<='9') 
+    {
+        num++;
+        do{
+            n=(n*10.0)+(*num++ -'0');
+            scale--;
+        }while (*num>='0' && *num<='9');
+    }	/* Fractional part? */
 	if (*num=='e' || *num=='E')		/* Exponent? */
-	{	num++;if (*num=='+') num++;	else if (*num=='-') signsubscale=-1,num++;		/* With sign? */
-		while (*num>='0' && *num<='9') subscale=(subscale*10)+(*num++ - '0');	/* Number? */
+	{
+        num++;
+        if (*num=='+') 
+            num++;
+        else if (*num=='-')
+        {
+            signsubscale=-1;
+            num++;
+        } /* With sign? */
+		while (*num>='0' && *num<='9')
+            subscale=(subscale*10)+(*num++ - '0');	/* Number? */
 	}
 
-	n=sign*n*pow(10.0,(scale+subscale*signsubscale));	/* number = +/- number.fraction * 10^+/- exponent */
+    totalscale = (scale+subscale*signsubscale);
+    if(totalscale > 0)
+    {
+        while(totalscale--)
+            n = n * 10;
+    }
+    else if(totalscale < 0)
+    {
+        while(totalscale++)
+            n = n / 10;
+    }
+    n = sign * n;
+	//n=sign*n*pow(10.0,(scale+subscale*signsubscale));	/* number = +/- number.fraction * 10^+/- exponent */
 	
 	item->valuedouble=n;
 	item->valueint=(int)n;

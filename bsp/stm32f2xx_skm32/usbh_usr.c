@@ -28,6 +28,9 @@
 /* puhuix 2014-12-20: modify this file for TI Zigbee dongle cc2531 */
 /* Includes ------------------------------------------------------------------*/
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "usbh_usr.h"
 #include "usbh_cdc_core.h"
 #include "usb_hcd_int.h"
@@ -423,6 +426,7 @@ struct mailbox cdc_mbox;
 // TODO: refine below code
 uint8_t usbh_usr_cdc_rxbuf[256];
 uint8_t usbh_usr_cdc_txbuf[256];
+extern int zllctrl_post_zll_message(uint8_t *message, uint16_t length);
 extern void zllSocProcessRpc(uint8_t *rpcBuff, uint16_t length);
 extern int zllctrl_init();
 extern void usbh_cdc_set_event(CDC_Machine_TypeDef *pCDC_Machine, uint8_t event);
@@ -436,9 +440,11 @@ void usbh_usr_cdc_rxdone(CDC_Machine_TypeDef *pCDC_Machine, uint8_t *RxBuffer, u
 	uint8_t length;
 
 	length = RxBuffer[1]+5; /* 5: SOF + LEN + CMD0 + CMD1 + FCS */
-	uprintf_default("CDC Rx done: length=%d RxDataLength=%d data0=0x%08x data1=0x%08x\n", 
-			  					length, RxDataLength, 
-			  					*(uint32_t *)&RxBuffer[0], *(uint32_t *)&RxBuffer[4]);
+    uprintf(UPRINT_INFO, UPRINT_BLK_DEF, "CDC Rx done: length=%d\n data: 0x%08x %08x %08x %08x\n", 
+        length, &RxBuffer[0], &RxBuffer[4], &RxBuffer[8], &RxBuffer[12]);
+    //kprintf("CDC Rx done: length=%d RxDataLength=%d\n", length, RxDataLength);
+    //dump_buffer(pCDC_Machine->RxBuffer, pCDC_Machine->RxBuffer[1]+4);
+
 	if(RxDataLength < length)
 	{
 		/* receive the reminder data and store them into the same buffer: 
@@ -474,8 +480,12 @@ int usbh_usr_cdc_rxreq(uint8_t *buffer, uint8_t length)
   */
 void usbh_usr_cdc_txdone(CDC_Machine_TypeDef *pCDC_Machine, uint8_t *TxBuffer, uint8_t TxDataLength)
 {
-	uprintf_default("CDC Tx done: length=%d data0=0x%08x data1=0x%08x\n", 
-							pCDC_Machine->TxDataLength, *(uint32_t *)&pCDC_Machine->TxBuffer[0], *(uint32_t *)&pCDC_Machine->TxBuffer[4]);
+    // debug code
+    uprintf(UPRINT_INFO, UPRINT_BLK_DEF, "CDC Tx done: length=%d\n data: 0x%08x %08x %08x %08x\n", 
+        pCDC_Machine->TxDataLength, &TxBuffer[0], &TxBuffer[4], &TxBuffer[8], &TxBuffer[12]);
+    //kprintf("CDC Tx done: length=%d\n", pCDC_Machine->TxDataLength);
+    //dump_buffer(TxBuffer, TxDataLength);
+
 	/* start Rx immediately */
 	usbh_usr_cdc_rxreq(usbh_usr_cdc_rxbuf, pCDC_Machine->epBulkIn.wMaxPacketSize);
 }
@@ -524,7 +534,8 @@ void OTG_HS_IRQHandler(void)
 void cdc_mail_handle(uint32_t *mail)
 {
 	uint8_t type;
-	uint8_t length;
+	uint8_t length, txlen = 0;
+    uint8_t maxRetries;
 	uint8_t *message;
 
 	type = (mail[0] & 0xFF000000)>>24;
@@ -535,7 +546,18 @@ void cdc_mail_handle(uint32_t *mail)
 			/* start transfer */
 			length = (mail[0] & 0x00FF0000)>>16;
 			message = (uint8_t *)mail[1];
-			usbh_usr_cdc_txreq(message, length);
+            maxRetries = 10;
+            while(maxRetries--)
+            {
+			    txlen = usbh_usr_cdc_txreq(message, length);
+                if(txlen != length)
+                    task_delay(10);
+                else
+                    break;
+            }
+            if(txlen != length)
+                uprintf(UPRINT_WARNING, UPRINT_BLK_DEF, "Warning: CDC Tx failed: length=%d\n", length);
+            free(message);
 			break;
 
 		case CDC_MSG_TYPE_RXREQ:
@@ -557,7 +579,7 @@ void usbh_cdc_task(void *p)
 	uint32_t mail[2];
 	int ret;
 	
-	assert(ROK == mbox_initialize(&cdc_mbox, 2, 8, NULL));
+	assert(ROK == mbox_initialize(&cdc_mbox, 2, 16, NULL));
 	
 	/* Init Host Stack */
 	USBH_Init(&USB_OTG_Core, USB_OTG_FS_CORE_ID, &USB_Host, &USBH_CDC_cb, &USR_cb);

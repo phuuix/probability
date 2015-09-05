@@ -36,8 +36,8 @@ struct dtask *current;				/* current task */
 readyq_t sysready_queue;			/* ready queue */
 static dllist_node_t sysdelay_slot[MAX_TASK_DELAY_NUMBER];
 ptimer_table_t sysdelay_queue;		/* delay task queue */
+uint32_t sysschedule_flags;
 
-static uint32_t schedule_flags;
 static uint32_t active_ints;
 static void (*task_schedule_hook)(struct dtask *, struct dtask *);
 
@@ -87,7 +87,7 @@ uint32_t sys_get_active_int()
  */
 void task_lock()
 {
-	schedule_flags |= SCHEDULE_FLAGS_LOCK;
+	sysschedule_flags |= SCHEDULE_FLAGS_LOCK;
 }
 
 /*
@@ -95,7 +95,7 @@ void task_lock()
  */
 void task_unlock()
 {
-	schedule_flags &= ~SCHEDULE_FLAGS_LOCK;
+	sysschedule_flags &= ~SCHEDULE_FLAGS_LOCK;
 
 	task_schedule();
 }
@@ -520,8 +520,12 @@ void task_schedule()
 	f = bsp_fsave();
 
 	/* when init current is NULL, this time we can't schedule */
-	if(current == NULL || (schedule_flags & SCHEDULE_FLAGS_LOCK))
+	if(current == NULL)
 		goto sche_end;
+
+    /* SCHEDULE_FLAGS_LOCK or SCHEDULE_FLAGS_ONGOING is set */
+    if(sysschedule_flags)
+        goto sche_end;
 
 	/* if current task is the task who owns the highest priority */
 	to = readyq_select(&sysready_queue);
@@ -548,7 +552,11 @@ void task_schedule()
 	if(task_schedule_hook)
 		(*task_schedule_hook)(from, to);
 	
-	current = to;
+    /* In some implementation, the bsp_task_switch isn't a real task switch but a trigger of trap.
+     * So we can't assign the current here, instead the current has to be assign inside the function
+     * bsp_task_switch or the trap function
+     */
+	// current = to;
 	
 	if(active_ints)
 		bsp_task_switch_interrupt((uint32_t)from, (uint32_t)to);
@@ -653,7 +661,7 @@ void task_init()
 	 * even system ready queue is empty */
 	current = NULL;
 
-	schedule_flags = 0;
+	sysschedule_flags = 0;
 	active_ints = 0;
 
 	bsp_frestore(f);

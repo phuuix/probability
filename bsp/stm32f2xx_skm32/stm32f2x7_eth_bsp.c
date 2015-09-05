@@ -107,10 +107,13 @@ static void ETH_MACDMA_Config(void)
 
   /* Fill ETH_InitStructure parametrs */
   /*------------------------   MAC   -----------------------------------*/
+#if 0
   ETH_InitStructure.ETH_AutoNegotiation = ETH_AutoNegotiation_Enable;
-  //ETH_InitStructure.ETH_AutoNegotiation = ETH_AutoNegotiation_Disable; 
-  //  ETH_InitStructure.ETH_Speed = ETH_Speed_10M;
-  //  ETH_InitStructure.ETH_Mode = ETH_Mode_FullDuplex;   
+#else
+  ETH_InitStructure.ETH_AutoNegotiation = ETH_AutoNegotiation_Disable; 
+  ETH_InitStructure.ETH_Speed = ETH_Speed_10M;
+  ETH_InitStructure.ETH_Mode = ETH_Mode_FullDuplex;
+#endif
 
   ETH_InitStructure.ETH_LoopbackMode = ETH_LoopbackMode_Disable;
   ETH_InitStructure.ETH_RetryTransmission = ETH_RetryTransmission_Disable;

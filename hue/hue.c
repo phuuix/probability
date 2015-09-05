@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "ipc.h"
 #include "uprintf.h"
 #include "clock.h"
 #include "hue.h"
@@ -38,6 +39,57 @@ hue_light_t gHueLight[HUE_MAX_LIGHTS];
 hue_user_t gHueUser[HUE_MAX_USERS];
 uint16_t gNumHueLight;
 uint16_t gNumHueUser;
+
+extern mbox_t g_hue_mbox;
+
+void hue_light_1_create()
+{
+	gNumHueLight = 2;
+    gNumHueUser = 1;
+
+	uint8_t myname[] = "HueLamp1";
+	uint8_t mymodelId[] = "LCT001";
+	uint8_t myswversion[] = "01150905";
+	
+	gHueLight[0].id = 1;
+	gHueLight[0].on = 0;
+	gHueLight[0].bri = 144;
+	gHueLight[0].hue = 13088;
+	gHueLight[0].sat = 212;
+	gHueLight[0].x = 32768;
+	gHueLight[0].y = 32768;
+	gHueLight[0].ct = 467;
+	gHueLight[0].alert = HUE_LIGHT_ALERT_NONE;
+	gHueLight[0].effect = HUE_LIGHT_EFFECT_NONE;
+	gHueLight[0].colormode = HUE_LIGHT_COLORMODE_HS;
+	gHueLight[0].reachable = 0;
+	gHueLight[0].type = 0;
+	strcpy((char *)gHueLight[0].name, (char *)myname);
+	strcpy((char *)gHueLight[0].modelId, (char *)mymodelId);
+	strcpy((char *)gHueLight[0].swversion, (char *)myswversion);
+    gHueLight[0].ep_info.nwkAddr = 0x02;
+    gHueLight[0].ep_info.endpoint = 0x0b;
+
+    gHueLight[1].id = 2;
+	gHueLight[1].on = 0;
+	gHueLight[1].bri = 144;
+	gHueLight[1].hue = 13088;
+	gHueLight[1].sat = 212;
+	gHueLight[1].x = 32768;
+	gHueLight[1].y = 32768;
+	gHueLight[1].ct = 467;
+	gHueLight[1].alert = HUE_LIGHT_ALERT_NONE;
+	gHueLight[1].effect = HUE_LIGHT_EFFECT_NONE;
+	gHueLight[1].colormode = HUE_LIGHT_COLORMODE_HS;
+	gHueLight[1].reachable = 0;
+	gHueLight[1].type = 0;
+	strcpy((char *)gHueLight[1].name, (char *)myname);
+    gHueLight[1].name[7] = '2';
+	strcpy((char *)gHueLight[1].modelId, (char *)mymodelId);
+	strcpy((char *)gHueLight[1].swversion, (char *)myswversion);
+    gHueLight[1].ep_info.nwkAddr = 0x03;
+    gHueLight[1].ep_info.endpoint = 0x0b;
+}
 
 hue_light_t *hue_find_light_by_id(uint8_t in_light_id)
 {
@@ -77,7 +129,13 @@ int process_hue_api_get_new_lights(char *out_responseBuf, uint32_t in_max_resp_s
 
 int process_hue_api_search_new_lights(char *out_responseBuf, uint32_t in_max_resp_size)
 {
-    // TODO: start a new search
+    hue_mail_t huemail;
+
+    // start a new search
+    huemail.search_new_lights.cmd = HUE_MAIL_CMD_SEACH_NEW_LIGHTS;
+    huemail.search_new_lights.username = NULL;
+    huemail.search_new_lights.unused = NULL;
+    mbox_post(&g_hue_mbox, (uint32_t *)&huemail);
 
 	return hue_json_build_search_new_lights(out_responseBuf, in_max_resp_size);
 }
@@ -110,13 +168,20 @@ int process_hue_api_rename_light(uint16_t in_light_id, char *newname, char *out_
 int process_hue_api_set_light_state(uint16_t in_light_id, hue_light_t *in_light, uint32_t in_bitmap, char *out_responseBuf, uint32_t in_max_resp_size)
 {
 	hue_light_t *light;
+    hue_mail_t huemail;
 	
 	// find the light
     light = hue_find_light_by_id(in_light_id);
     if(light == NULL)
         return hue_json_build_error(out_responseBuf, in_max_resp_size, HUE_ERROR_ID_003);
 
-    //TODO: issue a command to set light state
+    // issue a command to set light state
+    huemail.set_one_light.cmd = HUE_MAIL_CMD_SET_ONE_LIGHT;
+    huemail.set_one_light.light_id = in_light_id;
+    huemail.set_one_light.flags = in_bitmap;
+    huemail.set_one_light.username = NULL;
+    huemail.set_one_light.light = in_light;
+    mbox_post(&g_hue_mbox, (uint32_t *)&huemail);
 
 	return hue_json_build_set_light_state(out_responseBuf, in_max_resp_size, in_light, in_bitmap);
 }

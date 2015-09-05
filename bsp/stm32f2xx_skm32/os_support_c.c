@@ -188,8 +188,6 @@ static void dummy_isr_fun(int i)
 	kprintf("Unhandled interrupt %d occured!!!\n", i);
 
     panic("Unhandled interrupt\n");
-	
-	while(1);
 }
 
 
@@ -378,6 +376,7 @@ void panic(char *infostr)
 	journal_dump();
 	pmc_dump();
 	
+    __ASM("bkpt");
     while(1);
 }
 
