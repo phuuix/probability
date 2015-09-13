@@ -438,10 +438,11 @@ extern void usbh_cdc_set_event(CDC_Machine_TypeDef *pCDC_Machine, uint8_t event)
 void usbh_usr_cdc_rxdone(CDC_Machine_TypeDef *pCDC_Machine, uint8_t *RxBuffer, uint8_t RxDataLength)
 {
 	uint8_t length;
+    uint32_t *pData = (uint32_t *)RxBuffer;
 
 	length = RxBuffer[1]+5; /* 5: SOF + LEN + CMD0 + CMD1 + FCS */
     uprintf(UPRINT_INFO, UPRINT_BLK_DEF, "CDC Rx done: length=%d\n data: 0x%08x %08x %08x %08x\n", 
-        length, &RxBuffer[0], &RxBuffer[4], &RxBuffer[8], &RxBuffer[12]);
+        length, pData[0], pData[4], pData[8], pData[12]);
     //kprintf("CDC Rx done: length=%d RxDataLength=%d\n", length, RxDataLength);
     //dump_buffer(pCDC_Machine->RxBuffer, pCDC_Machine->RxBuffer[1]+4);
 
@@ -480,9 +481,10 @@ int usbh_usr_cdc_rxreq(uint8_t *buffer, uint8_t length)
   */
 void usbh_usr_cdc_txdone(CDC_Machine_TypeDef *pCDC_Machine, uint8_t *TxBuffer, uint8_t TxDataLength)
 {
+    uint32_t *pData = (uint32_t *)TxBuffer;
     // debug code
     uprintf(UPRINT_INFO, UPRINT_BLK_DEF, "CDC Tx done: length=%d\n data: 0x%08x %08x %08x %08x\n", 
-        pCDC_Machine->TxDataLength, &TxBuffer[0], &TxBuffer[4], &TxBuffer[8], &TxBuffer[12]);
+        pCDC_Machine->TxDataLength, pData[0], pData[4], pData[8], pData[12]);
     //kprintf("CDC Tx done: length=%d\n", pCDC_Machine->TxDataLength);
     //dump_buffer(TxBuffer, TxDataLength);
 
@@ -490,11 +492,15 @@ void usbh_usr_cdc_txdone(CDC_Machine_TypeDef *pCDC_Machine, uint8_t *TxBuffer, u
 	usbh_usr_cdc_rxreq(usbh_usr_cdc_rxbuf, pCDC_Machine->epBulkIn.wMaxPacketSize);
 }
 
+int usbh_usr_cdc_isTxIdle()
+{
+    return (CDC_Machine.TxDataLength==0);
+}
 
 /* start to Tx message */
 int usbh_usr_cdc_txreq(uint8_t *buff, uint8_t length)
 {
-	if(CDC_Machine.TxDataLength==0)
+	if(usbh_usr_cdc_isTxIdle())
 	{
 		memcpy(usbh_usr_cdc_txbuf, buff, length);
 		CDC_Machine.TxBuffer = usbh_usr_cdc_txbuf;
@@ -535,7 +541,6 @@ void cdc_mail_handle(uint32_t *mail)
 {
 	uint8_t type;
 	uint8_t length, txlen = 0;
-    uint8_t maxRetries;
 	uint8_t *message;
 
 	type = (mail[0] & 0xFF000000)>>24;
@@ -546,15 +551,9 @@ void cdc_mail_handle(uint32_t *mail)
 			/* start transfer */
 			length = (mail[0] & 0x00FF0000)>>16;
 			message = (uint8_t *)mail[1];
-            maxRetries = 10;
-            while(maxRetries--)
-            {
-			    txlen = usbh_usr_cdc_txreq(message, length);
-                if(txlen != length)
-                    task_delay(10);
-                else
-                    break;
-            }
+			txlen = usbh_usr_cdc_txreq(message, length);
+            // CDC is busy but we can't wait as Tx done is in same loop
+            // To fix this busy issue, prompt the priority of CDC task; or use ping-pong buffer...
             if(txlen != length)
                 uprintf(UPRINT_WARNING, UPRINT_BLK_DEF, "Warning: CDC Tx failed: length=%d\n", length);
             free(message);
@@ -588,18 +587,23 @@ void usbh_cdc_task(void *p)
 	
 	for(;;)
 	{
-		ret = mbox_pend(&cdc_mbox, mail, 1);
-		switch (ret)
-		{
-			case ROK:
-				/* handle command: rx, tx ... */
-				cdc_mail_handle(mail);
-				break;
-			case RTIMEOUT:
-				break;
-			default:
-				break;
-		}
+        if(usbh_usr_cdc_isTxIdle())
+        {
+    		ret = mbox_pend(&cdc_mbox, mail, 1);
+    		switch (ret)
+    		{
+    			case ROK:
+    				/* handle command: rx, tx ... */
+    				cdc_mail_handle(mail);
+    				break;
+    			case RTIMEOUT:
+    				break;
+    			default:
+    				break;
+    		}
+        }
+        else
+            task_delay(1);
 		
 		/* Host Task handler */
 		USBH_Process(&USB_OTG_Core, &USB_Host);
@@ -610,7 +614,7 @@ void usbh_cdc_init()
 {
 	task_t t;
 	/* create tcdc task */
-	t = task_create("tcdc", usbh_cdc_task, NULL, NULL, /* stack size */ 0x400, /* priority */ MAX_PRIORITY_LEVEL-3, 20, 0);
+	t = task_create("tcdc", usbh_cdc_task, NULL, NULL, /* stack size */ 0x400, /* priority */ 4, 20, 0);
 	assert(t > 0);
 	task_resume_noschedule(t);
 }
