@@ -117,7 +117,7 @@ static void low_level_init(struct netif *netif)
   netif->mtu = 1500;
 
   /* Accept broadcast address and ARP traffic */
-  netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP;
+  netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
    
   /* initialize MAC address in ethernet MAC */ 
   ETH_MACAddressConfig(ETH_MAC_Address0, netif->hwaddr); 
@@ -315,7 +315,7 @@ void ethernetif_isr(int irq)
 	/* Frame received */
 	if ( ETH_GetDMAFlagStatus(ETH_DMA_FLAG_R) == SET) 
 	{
-		/* wakeup net task */
+		/* wakeup net task (better solution is post a input message to tcpip_thread */
 		ret = net_task_job_add(ethernetif_input, &xnetif);
 		assert(ret == ROK);
 	}

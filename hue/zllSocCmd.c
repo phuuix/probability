@@ -1675,6 +1675,7 @@ static void processRpcSysZdo(uint8_t *rpcBuff)
   uint8_t status;
   uint16_t addr;
   uint8_t startIdx;
+  hue_light_t *light;
 	
   // rpcBuff[1]: cmd1
   if(rpcBuff[1] == MT_ZDO_END_DEVICE_ANNCE_IND) 
@@ -1683,6 +1684,21 @@ static void processRpcSysZdo(uint8_t *rpcBuff)
   	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: device announce ind, srcAddr=0x%x nwkAddr=0x%x IEEEAddr=0x%08x%08x\n", 
         *(uint16_t *)&rpcBuff[2], addr, *(uint32_t *)&rpcBuff[6], *(uint32_t *)&rpcBuff[10]);
     // TODO: to fetch this device's info
+#if 0
+    /* add the new device to light list... */
+    light = zllctrl_find_light_by_ieeeaddr(&rpcBuff[6]);
+    if(light == NULL)
+    {
+      light = zllctrl_create_light(epInfo);
+
+      /* TODO: get state of new light */
+    }
+
+    if(light != NULL)
+    {
+      light->reachable = 1;
+    }
+#endif
   }
   else if(rpcBuff[1] == MT_ZDO_IEEE_ADDR_RSP)
   {

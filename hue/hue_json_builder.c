@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "siprintf.h"
+#include "clock.h"
 #include "hue.h"
 #include "cJSON.h"
 #include "hue_json_builder.h"
@@ -113,7 +114,8 @@ uint32_t json_build_int(char *out_buf, uint32_t in_len, uint32_t v)
 {
 	uint32_t length = 0;
 
-	length = JSON_SPRINTF(out_buf, in_len, "%d", v);
+    if(in_len > 0)
+	    length = JSON_SPRINTF(out_buf, in_len, "%d", v);
 
 	return length;
 }
@@ -149,6 +151,39 @@ uint32_t json_build_null(char *out_buf, uint32_t in_len)
 	}
 
 	return length;
+}
+
+uint32_t json_build_pair_string(char *out_buf, uint32_t in_len, char *str_name, char *str_value)
+{
+    uint32_t offset = 0;
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, str_name);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+	offset += json_build_string(&out_buf[offset], in_len-offset, str_value);
+
+    return offset;
+}
+
+uint32_t json_build_pair_int(char *out_buf, uint32_t in_len, char *str_name, int int_value)
+{
+    uint32_t offset = 0;
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, str_name);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+	offset += json_build_int(&out_buf[offset], in_len-offset, int_value);
+
+    return offset;
+}
+
+uint32_t json_build_pair_bool(char *out_buf, uint32_t in_len, char *str_name, uint8_t bool_value)
+{
+    uint32_t offset = 0;
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, str_name);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+	offset += json_build_bool(&out_buf[offset], in_len-offset, bool_value);
+
+    return offset;
 }
 
 // double in xy
@@ -246,7 +281,7 @@ uint32_t hue_json_build_light_state(char *out_buf, uint32_t in_len, hue_light_t 
 	offset += json_build_char(&out_buf[offset], in_len-offset, ',');
 
 	// build reachable
-	offset += json_build_string(&out_buf[offset], in_len-offset, "on");
+	offset += json_build_string(&out_buf[offset], in_len-offset, "reachable");
 	offset += json_build_char(&out_buf[offset], in_len-offset, ':');
 	offset += json_build_bool(&out_buf[offset], in_len-offset, light->reachable);
 	
@@ -713,6 +748,302 @@ uint32_t hue_json_build_create_user(char *out_buf, uint32_t in_len, uint8_t succ
 	offset += json_build_object_end(&out_buf[offset], in_len-offset);
 	offset += json_build_array_end(&out_buf[offset], in_len-offset);
 	return offset;
+}
+
+uint32_t hue_json_build_get_config(char *out_buf, uint32_t in_len, hue_t *hue)
+{
+    uint32_t offset = 0, i;
+    struct hue_tm tm;
+    char tmpstr[64];
+
+    
+
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+    // name: string 4..16
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "name", hue->name);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // swupdate: object
+    // "swupdate":{"updatestate":0,"url":"","text":"","notify": false},
+    offset += json_build_string(&out_buf[offset], in_len-offset, "swupdate");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+    offset += json_build_pair_int(&out_buf[offset], in_len-offset, "updatestate", 0);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "url", "");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "text", "");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    offset += json_build_pair_bool(&out_buf[offset], in_len-offset, "notify", 0);
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // whitelist: object
+    offset += json_build_string(&out_buf[offset], in_len-offset, "whitelist");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+    for(i=0; i<gNumHueUser; i++)
+    {
+        offset += json_build_string(&out_buf[offset], in_len-offset, (char *)gHueUser[i].name);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        // last use date
+        hue_localtime(gHueUser[i].lastUseDate, &tm);
+        siprintf(tmpstr, 64, "2015-09-%02dT%02d-%02d-%02d", tm.tm_yday+1, tm.tm_hour, tm.tm_min, tm.tm_sec);
+        offset += json_build_pair_string(&out_buf[offset], in_len-offset, "last use date", tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        // create date
+        hue_localtime(gHueUser[i].createDate, &tm);
+        siprintf(tmpstr, 64, "2015-09-%02dT%02d-%02d-%02d", tm.tm_yday+1, tm.tm_hour, tm.tm_min, tm.tm_sec);
+        offset += json_build_pair_string(&out_buf[offset], in_len-offset, "create date", tmpstr);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        // name
+        offset += json_build_pair_string(&out_buf[offset], in_len-offset, "name", (char *)gHueUser[i].devType);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        if(i != gNumHueUser-1)
+            offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+    }
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // apiversion: string
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "apiversion", hue->apiversion);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // swversion: string
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "swversion", hue->swversion);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // proxyaddress: string 0..40
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "proxyaddress", "none");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // proxyport: uint16
+    offset += json_build_pair_int(&out_buf[offset], in_len-offset, "proxyport", 0);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // linkbutton: bool
+    offset += json_build_pair_bool(&out_buf[offset], in_len-offset, "linkbutton", 0);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // ipaddress: string
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "ipaddress", hue_get_ip_string());
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // mac: string
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "mac", hue_get_mac_string());
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // netmask: string
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "netmask", hue_get_netmask_string());
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // gateway: string
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "gateway", hue_get_gateway_string());
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // dhcp: bool
+    offset += json_build_pair_bool(&out_buf[offset], in_len-offset, "dhcp", 0);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // portalservices	bool
+    offset += json_build_pair_bool(&out_buf[offset], in_len-offset, "portalservices", 0);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // UTC: string
+    // get local time
+    hue_localtime(time(NULL), &tm);
+    siprintf(tmpstr, 64, "2015-09-%02dT%02d-%02d-%02d", tm.tm_yday+1, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "UTC", tmpstr);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // localtime: string
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "localtime", tmpstr);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // timezone: string 0..32
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "timezone", "none");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    // zigbeechannel: string
+    offset += json_build_pair_string(&out_buf[offset], in_len-offset, "zigbeechannel", "11");
+
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+    return offset;
+}
+
+uint32_t hue_json_build_group_attr(char *out_buf, uint32_t in_len, uint32_t group_id)
+{
+    uint32_t offset, i;
+    char tmpbuf[10];
+
+	offset = 0;
+
+    if(group_id == 0)
+    {
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        /* action */
+        offset += json_build_string(&out_buf[offset], in_len-offset, "action");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        // action: on
+        offset += json_build_pair_bool(&out_buf[offset], in_len-offset, "on", 1);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        // action: hue
+        offset += json_build_pair_int(&out_buf[offset], in_len-offset, "hue", 0);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        // action: effect
+        offset += json_build_pair_string(&out_buf[offset], in_len-offset, "effect", "none");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        // action: bri
+        offset += json_build_pair_int(&out_buf[offset], in_len-offset, "bri", 100);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        // action: sat
+        offset += json_build_pair_int(&out_buf[offset], in_len-offset, "sat", 100);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        // action: ct
+        offset += json_build_pair_int(&out_buf[offset], in_len-offset, "ct", 100);
+        // offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        // action: xy (TBD)
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        /* lights */
+        offset += json_build_string(&out_buf[offset], in_len-offset, "lights");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+        offset += json_build_array_start(&out_buf[offset], in_len-offset);
+        for(i=0; i<gNumHueLight; i++)
+        {
+            /* light id */
+            siprintf(tmpbuf, 10, "%d", gHueLight[i].id);
+            offset += json_build_string(&out_buf[offset], in_len-offset, tmpbuf);
+            if(i+1 < gNumHueLight)
+                offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        }
+        offset += json_build_array_end(&out_buf[offset], in_len-offset);
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        /* name */
+        offset += json_build_pair_string(&out_buf[offset], in_len-offset, "name", "DefaultGroup");
+        offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+        /* type */
+        offset += json_build_pair_string(&out_buf[offset], in_len-offset, "type", "LightGroup");
+
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+    }
+    else
+    {
+        /* at the moment other groups aren't supported */
+        offset += json_build_object_start(&out_buf[offset], in_len-offset);
+        offset += json_build_object_end(&out_buf[offset], in_len-offset);
+    }
+
+    return offset;
+}
+
+uint32_t hue_json_build_all_groups(char *out_buf, uint32_t in_len, hue_t *hue)
+{
+    uint32_t offset;
+
+	offset = 0;
+
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+    return offset;
+}
+
+uint32_t hue_json_build_all_schedules(char *out_buf, uint32_t in_len, hue_t *hue)
+{
+    uint32_t offset;
+
+	offset = 0;
+
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+    return offset;
+}
+
+uint32_t hue_json_build_all_scenes(char *out_buf, uint32_t in_len, hue_t *hue)
+{
+    uint32_t offset;
+
+	offset = 0;
+
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+    return offset;
+}
+
+uint32_t hue_json_build_all_rules(char *out_buf, uint32_t in_len, hue_t *hue)
+{
+    uint32_t offset;
+
+	offset = 0;
+
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+    return offset;
+}
+
+uint32_t hue_json_build_all_sensors(char *out_buf, uint32_t in_len, hue_t *hue)
+{
+    uint32_t offset;
+
+	offset = 0;
+
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+
+    return offset;
+}
+
+
+uint32_t hue_json_build_fullstate(char *out_buf, uint32_t in_len, hue_t *hue)
+{
+    uint32_t offset = 0;
+
+    offset += json_build_object_start(&out_buf[offset], in_len-offset);
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "lights");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += hue_json_build_all_lights(&out_buf[offset], in_len-offset);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "groups");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += hue_json_build_all_groups(&out_buf[offset], in_len-offset, hue);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "config");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += hue_json_build_get_config(&out_buf[offset], in_len-offset, hue);
+/*    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "schedules");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += hue_json_build_all_schedules(&out_buf[offset], in_len-offset, hue);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "scenes");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += hue_json_build_all_scenes(&out_buf[offset], in_len-offset, hue);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "rules");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += hue_json_build_all_rules(&out_buf[offset], in_len-offset, hue);
+    offset += json_build_char(&out_buf[offset], in_len-offset, ',');
+
+    offset += json_build_string(&out_buf[offset], in_len-offset, "sensors");
+    offset += json_build_char(&out_buf[offset], in_len-offset, ':');
+    offset += hue_json_build_all_sensors(&out_buf[offset], in_len-offset, hue);
+*/
+    offset += json_build_object_end(&out_buf[offset], in_len-offset);
+    return offset;
 }
 
 uint32_t hue_json_build_error(char *out_buf, uint32_t in_len, uint32_t in_error_id)

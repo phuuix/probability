@@ -37,12 +37,12 @@
 //#define USE_DHCP       /* enable DHCP, if disabled static address is used*/
  
 /* MAC ADDRESS*/
-#define MAC_ADDR0   12
-#define MAC_ADDR1   00
-#define MAC_ADDR2   00
-#define MAC_ADDR3   00
-#define MAC_ADDR4   00
-#define MAC_ADDR5   00
+#define MAC_ADDR0   0x00
+#define MAC_ADDR1   0x17
+#define MAC_ADDR2   0x88
+#define MAC_ADDR3   0x17
+#define MAC_ADDR4   0x33
+#define MAC_ADDR5   0xaa
  
 /*Static IP ADDRESS*/
 #define IP_ADDR0   192
@@ -59,7 +59,7 @@
 /*Gateway Address*/
 #define GW_ADDR0   192
 #define GW_ADDR1   168
-#define GW_ADDR2   0
+#define GW_ADDR2   100
 #define GW_ADDR3   1  
 #if 0
 /* MII and RMII mode selection, for STM322xG-EVAL Board(MB786) RevB ***********/

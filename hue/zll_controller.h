@@ -24,5 +24,7 @@ uint8_t zllctrl_process_touchlink_indication(epInfo_t *epInfo);
 uint8_t zllctrl_process_newdev_indication(epInfo_t *epInfo);
 hue_light_t *zllctrl_create_light(epInfo_t *epInfo);
 hue_light_t *zllctrl_find_light_by_addr(uint16_t nwkAddr, uint8_t endpoint);
+hue_light_t *zllctrl_find_light_by_ieeeaddr(uint8_t *ieeeaddr);
+
 
 #endif

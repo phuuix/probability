@@ -121,7 +121,8 @@ static void ETH_MACDMA_Config(void)
   ETH_InitStructure.ETH_ReceiveAll = ETH_ReceiveAll_Disable;
   ETH_InitStructure.ETH_BroadcastFramesReception = ETH_BroadcastFramesReception_Enable;
   ETH_InitStructure.ETH_PromiscuousMode = ETH_PromiscuousMode_Disable;
-  ETH_InitStructure.ETH_MulticastFramesFilter = ETH_MulticastFramesFilter_Perfect;
+  //ETH_InitStructure.ETH_MulticastFramesFilter = ETH_MulticastFramesFilter_Perfect;
+  ETH_InitStructure.ETH_MulticastFramesFilter = ETH_MulticastFramesFilter_None;
   ETH_InitStructure.ETH_UnicastFramesFilter = ETH_UnicastFramesFilter_Perfect;
 #ifdef CHECKSUM_BY_HARDWARE
   ETH_InitStructure.ETH_ChecksumOffload = ETH_ChecksumOffload_Enable;

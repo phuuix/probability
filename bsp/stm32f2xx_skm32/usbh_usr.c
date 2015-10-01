@@ -441,7 +441,7 @@ void usbh_usr_cdc_rxdone(CDC_Machine_TypeDef *pCDC_Machine, uint8_t *RxBuffer, u
     uint32_t *pData = (uint32_t *)RxBuffer;
 
 	length = RxBuffer[1]+5; /* 5: SOF + LEN + CMD0 + CMD1 + FCS */
-    uprintf(UPRINT_INFO, UPRINT_BLK_DEF, "CDC Rx done: length=%d\n data: 0x%08x %08x %08x %08x\n", 
+    uprintf(UPRINT_INFO, UPRINT_BLK_DEF, "CDC Rx done: length=%d data: 0x%08x %08x %08x %08x\n", 
         length, pData[0], pData[4], pData[8], pData[12]);
     //kprintf("CDC Rx done: length=%d RxDataLength=%d\n", length, RxDataLength);
     //dump_buffer(pCDC_Machine->RxBuffer, pCDC_Machine->RxBuffer[1]+4);
@@ -483,7 +483,7 @@ void usbh_usr_cdc_txdone(CDC_Machine_TypeDef *pCDC_Machine, uint8_t *TxBuffer, u
 {
     uint32_t *pData = (uint32_t *)TxBuffer;
     // debug code
-    uprintf(UPRINT_INFO, UPRINT_BLK_DEF, "CDC Tx done: length=%d\n data: 0x%08x %08x %08x %08x\n", 
+    uprintf(UPRINT_INFO, UPRINT_BLK_DEF, "CDC Tx done: length=%d data: 0x%08x %08x %08x %08x\n", 
         pCDC_Machine->TxDataLength, pData[0], pData[4], pData[8], pData[12]);
     //kprintf("CDC Tx done: length=%d\n", pCDC_Machine->TxDataLength);
     //dump_buffer(TxBuffer, TxDataLength);

@@ -36,6 +36,7 @@ void zllctrl_process_console_command( char *cmdBuff );
 void getConsoleCommandParams(char* cmdBuff, uint16_t *nwkAddr, uint8_t *addrMode, uint8_t *ep, uint8_t *value, uint16_t *transitionTime);
 uint32_t getParam( char *cmdBuff, char *paramId, uint32_t *paramInt);
 
+extern void ssdp_statemachine_init(uint32_t destIp, uint32_t destPort, uint16_t interval);
 extern int ssdp_init();
 
 static uint16_t savedNwkAddr;    
@@ -95,7 +96,7 @@ int zllctrl_post_console_command(char *command)
 {
     hue_mail_t huemail;
 
-    huemail.console.cmd = HUE_MAIL_CMD_TYPE_MASK;
+    huemail.console.cmd = HUE_MAIL_CMD_CONSOLE;
     huemail.console.length = strlen(command);
     huemail.console.data = (uint8_t *)command;
 
@@ -296,12 +297,14 @@ uint32_t getParam( char *cmdBuff, char *paramId, uint32_t *paramInt)
     if(strstr(paramStr, "0x"))   
     {
       //convert the hex value to an int.
-      sscanf(paramStr, "0x%x", paramInt);
+      //sscanf(paramStr, "0x%x", paramInt);
+      *paramInt = strtol(paramStr, NULL, 16);
     }
     else
     {
       //assume that it ust be dec and convert to int.
-      sscanf(paramStr, "%d", paramInt);
+      //sscanf(paramStr, "%d", paramInt);
+      *paramInt = strtol(paramStr, NULL, 10);
     }         
     
     //paramInt was set
@@ -402,6 +405,7 @@ uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
     }
 
     newlight = huemail->set_one_light.light;
+    assert(newlight);
         
     // update transition time first
     if(bitmap & (1<<HUE_LIGHT_STATE_TIME))
@@ -425,27 +429,32 @@ uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
     if(bitmap & (1<<HUE_LIGHT_STATE_ON))
     {
         zllSocSetState(cmdbuf, newlight->on, dstAddr, endpoint, addrMode);
+        light->on = newlight->on;
     }
 
     if(bitmap & (1<<HUE_LIGHT_STATE_BRI))
     {
         zllSocSetLevel(cmdbuf, newlight->bri, time, dstAddr, endpoint, addrMode);
+        light->bri = newlight->bri;
     }
 
     if(bitmap & (1<<HUE_LIGHT_STATE_HUE))
     {
         // TI hue is 8 bits but philips is 16 bits
         zllSocSetHue(cmdbuf, newlight->hue, time, dstAddr, endpoint, addrMode);
+        light->hue = newlight->hue;
     }
 
     if(bitmap & (1<<HUE_LIGHT_STATE_SAT))
     {
         zllSocSetSat(cmdbuf, newlight->sat, time, dstAddr, endpoint, addrMode);
+        light->sat = newlight->sat;
     }
     
     if(bitmap & (1<<HUE_LIGHT_STATE_XY))
     {
         zllSocSetColor(cmdbuf, newlight->x, newlight->y, time, dstAddr, endpoint, addrMode);
+        // xy TBD
     }
 
     if(bitmap & (1<<HUE_LIGHT_STATE_CT))
@@ -466,21 +475,25 @@ uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
     if(bitmap & (1<<HUE_LIGHT_STATE_BRIINC))
     {
         zllSocSetLevel(cmdbuf, light->bri + newlight->bri, time, dstAddr, endpoint, addrMode);
+        light->bri += newlight->bri;
     }
 
     if(bitmap & (1<<HUE_LIGHT_STATE_HUEINC))
     {
         zllSocSetHue(cmdbuf, light->hue + newlight->hue, time, dstAddr, endpoint, addrMode);
+        light->hue += newlight->hue;
     }
 
     if(bitmap & (1<<HUE_LIGHT_STATE_SATINC))
     {
         zllSocSetSat(cmdbuf, light->sat + newlight->sat, time, dstAddr, endpoint, addrMode);
+        light->sat += newlight->sat;
     }
 
     if(bitmap & (1<<HUE_LIGHT_STATE_XYINC))
     {
         zllSocSetColor(cmdbuf, light->x+newlight->x, light->y+newlight->y, time, dstAddr, endpoint, addrMode);
+        // xyinc TBD
     }
 
     if(bitmap & (1<<HUE_LIGHT_STATE_CTINC))
@@ -553,11 +566,16 @@ static uint32_t zllctrl_mainloop(hue_t *hue)
         ret = mbox_pend(&g_hue_mbox, (uint32_t *)&huemail, 0);
         if(ret == ROK)
         {
-            if(huemail.common.cmd & HUE_MAIL_CMD_TYPE_MASK)
+            if(huemail.common.cmd == HUE_MAIL_CMD_CONSOLE)
             {
                 /* process requests from console */
                 zllctrl_process_console_command((char *)huemail.console.data);
 				free(huemail.console.data);
+            }
+            else if(huemail.common.cmd == HUE_MAIL_CMD_SSDP)
+            {
+                /* process SSDP discovery request: send back SSDP alive message */
+                ssdp_statemachine_init(huemail.ssdp.ipaddr, huemail.ssdp.port, huemail.ssdp.interval);
             }
             else
             {
@@ -567,7 +585,7 @@ static uint32_t zllctrl_mainloop(hue_t *hue)
         }
 
         /* wait for response and indication from soc */
-        ret = mbox_pend(&g_zll_mbox, (uint32_t *)&zllmail, 2);
+        ret = mbox_pend(&g_zll_mbox, (uint32_t *)&zllmail, 1);
         if(ret == ROK)
         {
             /* process messages from zigbee device */
@@ -586,6 +604,23 @@ hue_light_t *zllctrl_find_light_by_addr(uint16_t nwkAddr, uint8_t endpoint)
     for(i=0; i<gNumHueLight; i++)
     {
         if(gHueLight[i].ep_info.nwkAddr == nwkAddr && gHueLight[i].ep_info.endpoint == endpoint)
+        {
+            light = &gHueLight[i];
+            break;
+        }
+    }
+
+    return light;
+}
+
+hue_light_t *zllctrl_find_light_by_ieeeaddr(uint8_t *ieeeaddr)
+{
+    int i;
+    hue_light_t *light = NULL;
+
+    for(i=0; i<gNumHueLight; i++)
+    {
+        if(memcmp(gHueLight[i].ep_info.IEEEAddr, ieeeaddr, 8) == 0)
         {
             light = &gHueLight[i];
             break;
@@ -827,15 +862,13 @@ static void zllctrl_task(void *p)
 	uint32_t ret;
 
 	uprintf_set_enable(UPRINT_INFO, UPRINT_BLK_HUE, 1);
-	uprintf_set_enable(UPRINT_DEBUG, UPRINT_BLK_HUE, 1);
-	
-    // for debug
-    hue_light_1_create();
+	//uprintf_set_enable(UPRINT_DEBUG, UPRINT_BLK_HUE, 1);
 
 	// delay 3s to wait other is up
 	task_delay(3*100);
 	
 	hue = (hue_t *)p;
+    hue_data_init(hue);
 	zllctrl_set_state(hue, HUE_STATE_INIT);
 	
     /* create timer table */

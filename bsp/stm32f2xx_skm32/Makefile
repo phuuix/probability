@@ -32,6 +32,7 @@ all: dooloo dooloo.bin
 clean :
 	$(RM) *.o
 	$(RM) $(LIB_PATH)/libbsp.a .depend 
+	$(RM) dooloo dooloo.bin
 
 dep : .depend
 

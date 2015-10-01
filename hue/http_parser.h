@@ -36,18 +36,40 @@ typedef unsigned int uint32_t;
 #define HTTP_CONTENTTYPE_HTML 2
 #define HTTP_CONTENTTYPE_APP 3
 
+enum
+{
+    HUE_URL_TOKEN_UNKNOW,
+    HUE_URL_TOKEN_DESCRIPTION_XML,
+    HUE_URL_TOKEN_API,
+    HUE_URL_TOKEN_LIGHTS,
+    HUE_URL_TOKEN_NEW,
+    HUE_URL_TOKEN_STATE,
+    HUE_URL_TOKEN_GROUPS,
+    HUE_URL_TOKEN_ACTION,
+    HUE_URL_TOKEN_SCHEDULES,
+    HUE_URL_TOKEN_SCENES,
+    HUE_URL_TOKEN_SENSORS,
+    HUE_URL_TOKEN_CONFIG,
+    HUE_URL_TOKEN_RULES,
+    HUE_URL_TOKEN_WHITELIST,
+    HUE_URL_TOKEN_TIMEZONES,
+};
+
+#define HTTP_URL_TOKEN_MAX_NUM 8
 typedef struct http_parser 
 {
 	uint8_t req_type;
 	uint8_t content_type;
 	uint16_t content_len;
 	uint8_t keep_live;
-	char *url;
+    uint8_t num_request_header;
+    uint8_t num_token;
+    uint8_t val_token[HTTP_URL_TOKEN_MAX_NUM];
+	char *url_token[HTTP_URL_TOKEN_MAX_NUM];
 	char *content;
 }http_parser_t;
 
 
-void http_parser_dump(http_parser_t *parser);
 int http_parse_request(char *in_buf, uint16_t length, http_parser_t *parser);
 
 #endif //_HTTP_PARSER_H_

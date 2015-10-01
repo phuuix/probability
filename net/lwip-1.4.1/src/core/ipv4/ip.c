@@ -793,7 +793,7 @@ err_t ip_output_if_opt(struct pbuf *p, ip_addr_t *src, ip_addr_t *dest,
   }
 #endif /* IP_FRAG */
 
-  LWIP_DEBUGF(IP_DEBUG, ("netif->output()"));
+  LWIP_DEBUGF(IP_DEBUG, ("netif->output()\n"));
   return netif->output(netif, p, dest);
 }
 

@@ -10,7 +10,31 @@
 
 #include "http_parser.h"
 #include "uprintf.h"
+#include "hue.h"
 
+const char *hue_url_tokens[] = 
+{
+    "unknow", //HUE_URL_TOKEN_UNKNOW,
+    "description.xml", //HUE_URL_TOKEN_DESCRIPTION_XML,
+    "api", //HUE_URL_TOKEN_API,
+    "lights", //HUE_URL_TOKEN_LIGHTS,
+    "new", //HUE_URL_TOKEN_NEW,
+    "state", //HUE_URL_TOKEN_STATE,
+    "groups", //HUE_URL_TOKEN_GROUPS,
+    "action", //HUE_URL_TOKEN_ACTION,
+    "schedules", //HUE_URL_TOKEN_SCHEDULES,
+    "scenes", //HUE_URL_TOKEN_SCENES,
+    "sensors", //HUE_URL_TOKEN_SENSORS,
+    "config", //HUE_URL_TOKEN_CONFIG,
+    "rules", //HUE_URL_TOKEN_RULES,
+    "whitelist", //HUE_URL_WHITELIST,
+    "timezones", //HUE_URL_TIMEZONES,
+};
+
+/* return the first token by parsing a string with separator character 
+ * str: input -- string; output -- after the first token 
+ * return: first token
+ */
 char *strtoken(char **str, char separator)
 {
 	char *rstr;
@@ -77,6 +101,43 @@ int http_parse_content_type(char *in_buf, uint16_t length)
 	return type;
 }
 
+/**
+ * parse a HTTP URL
+ */
+void http_parse_url(char *in_buf, uint16_t length, http_parser_t *parser)
+{
+    char *line=in_buf;
+    char *tmpptr;
+    int num_token = 0, i;
+
+    if(in_buf == NULL || length == 0)
+        return;
+
+    do
+    {
+        tmpptr = strtoken(&line, '/');
+        parser->url_token[num_token ++] = tmpptr;
+    }while(tmpptr && (num_token <= HTTP_URL_TOKEN_MAX_NUM));
+
+    parser->num_token = num_token-1;
+
+    for(num_token=0; num_token<parser->num_token; num_token++)
+    {
+        for(i=1; i<=HUE_URL_TOKEN_TIMEZONES; i++)
+        {
+            if(strcmp(hue_url_tokens[i], parser->url_token[num_token]) == 0)
+            {
+                /* save the token value */
+                parser->val_token[num_token] = i;
+                break;
+            }
+        }
+    }
+
+    uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "HTTP URL token number: %d\n", parser->num_token);
+}
+
+
 /* parse HTTP request line
  * Request-Line = Method SP Request-URI SP HTTP-Version CRLF
  * return: the offset to Content-Type
@@ -107,7 +168,8 @@ int http_parse_request_line(char *in_buf, uint16_t length, http_parser_t *parser
 	if(offset >= 0)
 	{
 		// req type is OK, get and terminatel url
-		parser->url = strtoken(&line, ' ');
+		tmpptr = strtoken(&line, ' ');
+        http_parse_url(tmpptr, strlen(tmpptr), parser);
 
 		// go to next line
 		tmpptr = strstr(line, HTTP_STR_LF);
@@ -175,7 +237,8 @@ int http_parse_request_headers(char *in_buf, uint16_t length, http_parser_t *par
 		else
 			offset = length;
 
-		uprintf_default("request header -- %s:%s\n", header, value);
+        parser->num_request_header ++;
+		uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "request header -- %s:%s\n", header, value);
 	}
 	
 	return offset;
@@ -188,6 +251,8 @@ int http_parse_request_body(char *in_buf, uint16_t length, http_parser_t *parser
 	{
 		parser->content = in_buf;
         parser->content[length] = 0; // terminate string
+        if(parser->content_len == 0)
+            parser->content_len = length;
 	}
 	else
 		parser->content = NULL;
@@ -233,14 +298,10 @@ int http_parse_request(char *in_buf, uint16_t length, http_parser_t *parser)
 		uprintf_default("unknow HTTP request type: %s\n", in_buf);
 	}
 
-	return offset;
-}
+    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "HTTP parser result: reqType=%d nURLToken=%d nHeader=%d contentLen=%d\n",
+        parser->req_type, parser->num_token, parser->num_request_header, parser->content_len);
 
-void http_parser_dump(http_parser_t *parser)
-{
-	uprintf_default("req_type=%d url=%s content(type=%d length=%d) keeplive=%d\n", 
-		parser->req_type, parser->url, parser->content_type, parser->content_len, parser->keep_live);
-	uprintf_default("HTTP body: %s\n", parser->content);
+	return offset;
 }
 
 #ifdef HTTP_HOST_TEST
@@ -266,7 +327,6 @@ int main(int argc, char *argv[])
 
 		http_parse_request(msgbuf, strlen(msgbuf), &http_parser);
 
-		http_parser_dump(&http_parser);
 	}
 
 	return 0;

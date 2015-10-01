@@ -152,6 +152,10 @@ typedef struct hue_s
 {
 	uint16_t state;
 
+    char name[16];
+    char apiversion[16];
+    char swversion[16];
+
     uint8_t transport_rev;              // transport protocol revision
     uint8_t product_id;                 // Product Id
     uint8_t major_rel;                  // Software major release number
@@ -167,8 +171,18 @@ typedef struct hue_s
     uint8_t socbuf[SOC_MT_CMD_BUF_SIZ];    // store the MT response and indication
 }hue_t;
 
+struct hue_tm 
+{
+    int tm_sec;
+    int tm_min;
+    int tm_hour;
+    int tm_mday;
+    int tm_mon;
+    int tm_year;
+    int tm_yday;
+};
+
 /* hue mail macros */
-#define HUE_MAIL_CMD_TYPE_MASK 0x80      // indicate this is from console or not
 #define HUE_MAIL_CMD_GET_ALL_LIGHTS   0
 #define HUE_MAIL_CMD_GET_NEW_LIGHTS   1
 #define HUE_MAIL_CMD_SEACH_NEW_LIGHTS 2
@@ -176,6 +190,8 @@ typedef struct hue_s
 #define HUE_MAIL_CMD_RENAME_LIGHT     4
 #define HUE_MAIL_CMD_SET_ONE_LIGHT    5
 #define HUE_MAIL_CMD_DELETE_LIGHT     6
+#define HUE_MAIL_CMD_CONSOLE          64
+#define HUE_MAIL_CMD_SSDP             128
 
 /* hue light state bitmap */
 #define HUE_LIGHT_STATE_ON            0
@@ -221,6 +237,15 @@ typedef union hue_mail_s
         uint8_t *data;
     } console;
 
+    struct // ssdp command 
+    {
+        uint8_t cmd;
+        uint8_t filler;
+        uint16_t interval;
+        uint16_t port;
+        uint32_t ipaddr;
+    } ssdp;
+
     struct //
     {
         uint8_t cmd;
@@ -246,6 +271,12 @@ extern hue_light_t gHueLight[HUE_MAX_LIGHTS];
 extern hue_user_t gHueUser[HUE_MAX_USERS];
 extern uint16_t gNumHueLight;
 extern uint16_t gNumHueUser;
+extern hue_t g_hue;
+
+char *hue_get_ip_string();
+char *hue_get_netmask_string();
+char *hue_get_mac_string();
+char *hue_get_gateway_string();
 
 hue_light_t *hue_find_light_by_id(uint8_t in_light_id);
 int process_hue_api_get_all_lights(char *out_responseBuf, uint32_t in_max_resp_size);
@@ -255,5 +286,13 @@ int process_hue_api_get_light_attr_state(uint16_t in_light_id, char *out_respons
 int process_hue_api_rename_light(uint16_t in_light_id, char *newname, char *out_responseBuf, uint32_t in_max_resp_size);
 int process_hue_api_set_light_state(uint16_t in_light_id, hue_light_t *in_light, uint32_t in_bitmap, char *out_responseBuf, uint32_t in_max_resp_size);
 int process_hue_api_create_user(char *devType, char *userName, char *responseBuf, uint32_t size);
+int process_hue_api_get_configuration(char *responseBuf, uint32_t size);
+int process_hue_api_get_full_state(char *responseBuf, uint32_t size);
+int process_hue_api_get_group_attr(uint32_t group_id, char *responseBuf, uint32_t size);
+int process_hue_api_get_all_groups(char *responseBuf, uint32_t size);
+
+
+void hue_localtime(uint32_t t, struct hue_tm *tm);
+void hue_data_init(hue_t *hue);
 
 #endif //_HUE_H_
