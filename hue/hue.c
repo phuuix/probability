@@ -325,55 +325,37 @@ int process_hue_api_get_full_state(char *responseBuf, uint32_t size)
 
 void hue_data_init(hue_t *hue)
 {
-	uint8_t myname[] = "HueLamp1";
-	uint8_t mymodelId[] = "LCT001";
-	uint8_t myswversion[] = "01150905";
+    uint8_t i;
 	
     strcpy(hue->name, "HUE0");
     strcpy(hue->apiversion, "1.3.0");
     strcpy(hue->swversion, "0.9.0");
 
-    /* create two lights for debug */
+    for(i=0; i<HUE_MAX_LIGHTS; i++)
+    {
+    	gHueLight[i].id = i+1;
+    	gHueLight[i].on = 0;
+    	gHueLight[i].bri = 100;
+    	gHueLight[i].hue = 13088;
+    	gHueLight[i].sat = 100;
+    	gHueLight[i].x = 32768;
+    	gHueLight[i].y = 32768;
+    	gHueLight[i].ct = 500;
+    	gHueLight[i].alert = HUE_LIGHT_ALERT_NONE;
+    	gHueLight[i].effect = HUE_LIGHT_EFFECT_NONE;
+    	gHueLight[i].colormode = HUE_LIGHT_COLORMODE_HS;
+    	gHueLight[i].reachable = 0;
+    	gHueLight[i].type = 0;
+        siprintf((char *)gHueLight[i].name, 32, "HueLamp%d", i+1);
+    	strcpy((char *)gHueLight[i].modelId, "LCT001");
+    	strcpy((char *)gHueLight[i].swversion, "01150905");
+        gHueLight[i].ep_info.nwkAddr = 0x02+i;
+        gHueLight[i].ep_info.endpoint = 0x0b;
+    }
+
+    /* create one lights for debug */
     gNumHueLight = 1;
-
-	gHueLight[0].id = 1;
-	gHueLight[0].on = 0;
-	gHueLight[0].bri = 100;
-	gHueLight[0].hue = 13088;
-	gHueLight[0].sat = 100;
-	gHueLight[0].x = 32768;
-	gHueLight[0].y = 32768;
-	gHueLight[0].ct = 500;
-	gHueLight[0].alert = HUE_LIGHT_ALERT_NONE;
-	gHueLight[0].effect = HUE_LIGHT_EFFECT_NONE;
-	gHueLight[0].colormode = HUE_LIGHT_COLORMODE_HS;
-	gHueLight[0].reachable = 1;
-	gHueLight[0].type = 0;
-	strcpy((char *)gHueLight[0].name, (char *)myname);
-	strcpy((char *)gHueLight[0].modelId, (char *)mymodelId);
-	strcpy((char *)gHueLight[0].swversion, (char *)myswversion);
-    gHueLight[0].ep_info.nwkAddr = 0x02;
-    gHueLight[0].ep_info.endpoint = 0x0b;
-
-    gHueLight[1].id = 2;
-	gHueLight[1].on = 0;
-	gHueLight[1].bri = 100;
-	gHueLight[1].hue = 13088;
-	gHueLight[1].sat = 100;
-	gHueLight[1].x = 32768;
-	gHueLight[1].y = 32768;
-	gHueLight[1].ct = 500;
-	gHueLight[1].alert = HUE_LIGHT_ALERT_NONE;
-	gHueLight[1].effect = HUE_LIGHT_EFFECT_NONE;
-	gHueLight[1].colormode = HUE_LIGHT_COLORMODE_HS;
-	gHueLight[1].reachable = 0;
-	gHueLight[1].type = 0;
-	strcpy((char *)gHueLight[1].name, (char *)myname);
-    gHueLight[1].name[7] = '2';
-	strcpy((char *)gHueLight[1].modelId, (char *)mymodelId);
-	strcpy((char *)gHueLight[1].swversion, (char *)myswversion);
-    gHueLight[1].ep_info.nwkAddr = 0x03;
-    gHueLight[1].ep_info.endpoint = 0x0b;
+    gHueLight[0].reachable = 1;
 
     /* create one user (in whitelist) for debug */
     gNumHueUser = 1;

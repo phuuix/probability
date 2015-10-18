@@ -1,4 +1,6 @@
-/* a simple command line */
+/* a simple command line
+ * no use uprintf in this file 
+ */
 
 #include <string.h>
 #include <stdlib.h>
@@ -23,7 +25,7 @@
  */
 
 static struct shell_session session;
-extern mbox_t g_hue_mbox;
+
 void task_dump(struct shell_session *ss, task_t t);
 
 
@@ -36,6 +38,7 @@ int cmd_help(struct shell_session *ss, int argc, char **argv)
 	ss->output("t <block> <value>: set trace level\n");
 	ss->output("s m|j|c:           show memory, journal, counter\n");
 	ss->output("z <string>:        ZLL commands\n");
+    ss->output("b:                 breakpoint mode\n");
 
 	return 0;
 }
@@ -185,11 +188,10 @@ int cmd_toggle_trace(struct shell_session *ss, int argc, char **argv)
 	return 0;
 }
 
-extern void processConsoleCommand( char *cmdBuff );
+extern void zllctrl_post_console_command( char *cmdBuff );
 int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 {
 	char *commands;
-	uint32_t mail[2];
 	uint8_t i, n=0, l;
 
 	if(argc < 2)
@@ -198,9 +200,9 @@ int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 		return 0;
 	}
 
-	commands = malloc(256);
-	assert(commands);
-	
+    commands = malloc(128);
+    assert(commands);
+
 	for(i=1; i<argc; i++)
 	{
 		l = siprintf(&commands[n], 128-n,  "%s ", argv[i]);
@@ -208,20 +210,17 @@ int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 	}
 
 	ss->output("Zigbee commands: %s\n", commands);
-
-	/* send a event to tzll task */
-	*(uint8_t *)mail = 2; /* ZLL_EVENT_CONSOLE */
-	mail[1] = (uint32_t)commands;
-	assert(ROK == mbox_post(&g_hue_mbox, mail));
+	
+	zllctrl_post_console_command(commands);
 	
 	return 0;
 }
 
-extern void eth_dump_phy_register();
-int cmd_ethtest(struct shell_session *ss, int argc, char **argv)
+int cmd_breakpoint(struct shell_session *ss, int argc, char **argv)
 {
-	eth_dump_phy_register();
-	return 0;
+    __asm("bkpt");
+
+    return 0;
 }
 
 char *cmd_strtok(char **str, char separator)
@@ -299,7 +298,7 @@ int cmd_process(char *cmd)
 	
 	if(strlen(argv[0]) != 1)
 	{
-		uprintf(UPRINT_WARNING, UPRINT_BLK_CLI, "unknown command: %s\n", argv[0]);
+		kprintf("unknown command: %s\n", argv[0]);
 		return 0;
 	}
 	
@@ -348,15 +347,15 @@ int cmd_process(char *cmd)
 			cmd_zllctrl(&session, argc, argv);
 			break;
 		}
-
-		case 'e':
-		{
-			cmd_ethtest(&session, argc, argv);
-			break;
-		}
 		
+        case 'b':
+        {
+            cmd_breakpoint(&session, argc, argv);
+			break;
+        }
+
 		default:
-			uprintf(UPRINT_WARNING, UPRINT_BLK_CLI, "Unknown command: %s\n", argv[0]);
+			kprintf("Unknown command: %s\n", argv[0]);
 			break;
 	}
 	

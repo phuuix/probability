@@ -1,4 +1,6 @@
-/* a simple command line */
+/* a simple command line
+ * no use uprintf in this file 
+ */
 
 #include <string.h>
 #include <stdlib.h>
@@ -36,6 +38,7 @@ int cmd_help(struct shell_session *ss, int argc, char **argv)
 	ss->output("t <block> <value>: set trace level\n");
 	ss->output("s m|j|c:           show memory, journal, counter\n");
 	ss->output("z <string>:        ZLL commands\n");
+    ss->output("b:                 breakpoint mode\n");
 
 	return 0;
 }
@@ -213,6 +216,13 @@ int cmd_zllctrl(struct shell_session *ss, int argc, char **argv)
 	return 0;
 }
 
+int cmd_breakpoint(struct shell_session *ss, int argc, char **argv)
+{
+    __asm("bkpt");
+
+    return 0;
+}
+
 char *cmd_strtok(char **str, char separator)
 {
 	char *rstr;
@@ -288,7 +298,7 @@ int cmd_process(char *cmd)
 	
 	if(strlen(argv[0]) != 1)
 	{
-		uprintf(UPRINT_WARNING, UPRINT_BLK_CLI, "unknown command: %s\n", argv[0]);
+		kprintf("unknown command: %s\n", argv[0]);
 		return 0;
 	}
 	
@@ -338,8 +348,14 @@ int cmd_process(char *cmd)
 			break;
 		}
 		
+        case 'b':
+        {
+            cmd_breakpoint(&session, argc, argv);
+			break;
+        }
+
 		default:
-			uprintf(UPRINT_WARNING, UPRINT_BLK_CLI, "Unknown command: %s\n", argv[0]);
+			kprintf("Unknown command: %s\n", argv[0]);
 			break;
 	}
 	

@@ -167,6 +167,7 @@ int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms)
 	char *prtbuf;
 	printdev_t sprintdev;
 	uint16_t uprintf_buf_wtpt_local;
+    uint32_t tv_sec, tv_nsec;
 
 	/* check if the print can go through */
 	if(!uprintf_enabled(level, block_id))
@@ -197,7 +198,10 @@ int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms)
 	
 	if(uprintf_logflags & UPRINTF_LOGTIME) // add 9 more bytes
 	{
-		printi(&sprintdev, tick(), 16, 0, 8 /* width */, 2 /* PAD_ZERO */, 'a');
+        bsp_gettime(&tv_sec, &tv_nsec);
+		printi(&sprintdev, tv_sec, 16, 0, 6 /* width */, 2 /* PAD_ZERO */, 'a');
+        prints(&sprintdev, ".", 0, 0);
+        printi(&sprintdev, tv_nsec/1000, 16, 0, 6 /* width */, 2 /* PAD_ZERO */, 'a');
 		prints(&sprintdev, " ", 0, 0);
 	}
 	

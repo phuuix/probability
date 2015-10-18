@@ -26,7 +26,6 @@ static uint32_t isr_table[MAX_HANDLERS];
 static void dummy_isr_fun(int i);
 extern char _irq_stack_start[];
 extern struct dtask systask[];
-extern uint32_t sys_time_calibration;
 
 void dump_buffer(uint8_t *buffer, uint16_t length)
 {
@@ -45,13 +44,9 @@ void dump_buffer(uint8_t *buffer, uint16_t length)
 
 void bsp_gettime(uint32_t *tv_sec, uint32_t *tv_nsec)
 {
-	uint32_t ns;
-
 	*tv_sec = time(NULL);
 	/* TIM_GetCounter() return us */
-	ns = TIM_GetCounter(TIM2)*1000;
-	//*tv_nsec = ns;
-	*tv_nsec = (ns >= sys_time_calibration)? (ns-sys_time_calibration):(1000000000-sys_time_calibration+ns);
+	*tv_nsec = TIM_GetCounter(TIM2)*1000;
 }
 
 

@@ -65,12 +65,11 @@ void journal_memory_free(uint32_t size, void *data, char *file, uint32_t line, t
  **************************************************************************/
 void journal_task_switch(struct dtask *from, struct dtask *to)
 {
-	uprintf(UPRINT_INFO, UPRINT_BLK_TSK, "Task switch: from(%s: sp=0x%x) to(%s: sp=0x%x)\n", 
-			from->name, from->sp, to->name, to->sp);
+    uint32_t tv_sec;
 
 	// save task switch history
 	struct journal_taskswitch *jtaskswitch = (struct journal_taskswitch *)JOURNAL_CLASS1_NEXTRECORD;
-	jtaskswitch->time = tick();
+    bsp_gettime(&tv_sec, &jtaskswitch->time);
 	jtaskswitch->jtype = JOURNAL_TYPE_TASKSWITCH;
 	jtaskswitch->t_from = TASK_T(from);
 	jtaskswitch->t_to = TASK_T(to);
@@ -83,11 +82,11 @@ void journal_task_switch(struct dtask *from, struct dtask *to)
 
 void journal_ipc_pend(ipc_t *ipc, task_t task)
 {
-	uprintf(UPRINT_INFO, UPRINT_BLK_IPC, "IPC pend: type=%d ipc=0x%x task=%d\n", ipc->type, ipc, task);
+    uint32_t tv_sec;
 
 	// save ipc history
 	struct journal_ipcop *jipcop = (struct journal_ipcop *)JOURNAL_CLASS1_NEXTRECORD;
-	jipcop->time = tick();
+	bsp_gettime(&tv_sec, &jipcop->time);
 	jipcop->ipc_ptr = ipc;
 	jipcop->ipctype = ipc->type;
     jipcop->active_ints = sys_get_active_int();
@@ -100,11 +99,11 @@ void journal_ipc_pend(ipc_t *ipc, task_t task)
 
 void journal_ipc_post(ipc_t *ipc, task_t task)
 {
-	uprintf(UPRINT_INFO, UPRINT_BLK_IPC, "IPC post: type=%d ipc=0x%x task=%d\n", ipc->type, ipc, task);
+    uint32_t tv_sec;
 
 	// save ipc history
 	struct journal_ipcop *jipcop = (struct journal_ipcop *)JOURNAL_CLASS1_NEXTRECORD;
-	jipcop->time = tick();
+	bsp_gettime(&tv_sec, &jipcop->time);
 	jipcop->ipc_ptr = ipc;
 	jipcop->ipctype = ipc->type;
     jipcop->active_ints = sys_get_active_int();
@@ -114,13 +113,47 @@ void journal_ipc_post(ipc_t *ipc, task_t task)
 	JOURNAL_CLASS1_UPDATENEXT();
 }
 
+/* record current time */
+void journal_timestamp()
+{
+    struct journal_time *jtime;
+
+    jtime = (struct journal_time *)JOURNAL_CLASS1_NEXTRECORD;
+    bsp_gettime(&jtime->tv_sec, &jtime->time);
+    jtime->filler = JOURNAL_TYPE_TIMESTAMP;
+    jtime->cur_tid = TASK_T(current);
+    jtime->jtype = JOURNAL_TYPE_TIMESTAMP;
+
+    JOURNAL_CLASS1_UPDATENEXT();
+}
+
+void journal_user_defined(uint32_t data1, uint32_t data2)
+{
+    uint32_t flags;
+    uint32_t tv_sec;
+    uint32_t *pdata;
+
+    flags = bsp_fsave();
+
+    pdata = (uint32_t *)JOURNAL_CLASS1_NEXTRECORD;
+    bsp_gettime(&tv_sec, &pdata[0]);
+    pdata[1] = data1;
+    pdata[2] = data2;
+
+    JOURNAL_CLASS1_UPDATENEXT();
+
+    bsp_frestore(flags);
+}
+
 /**************************************************************************
  * CLASS2 journal: object create and destroy
  **************************************************************************/
 void journal_task_create(struct dtask *task)
 {
+    uint32_t tv_sec;
+
 	struct journal_tasklife *jtasklife = (struct journal_tasklife *)JOURNAL_CLASS2_NEXTRECORD;
-	jtasklife->time = tick();
+	bsp_gettime(&tv_sec, &jtasklife->time);
 	jtasklife->jtype = JOURNAL_TYPE_TASKCREATE;
 	jtasklife->flags = task->flags;
 	jtasklife->filler = 0xFFFF;
@@ -133,8 +166,10 @@ void journal_task_create(struct dtask *task)
 
 void journal_task_exit(struct dtask *task)
 {
+    uint32_t tv_sec;
+
 	struct journal_tasklife *jtasklife = (struct journal_tasklife *)JOURNAL_CLASS2_NEXTRECORD;
-	jtasklife->time = tick();
+	bsp_gettime(&tv_sec, &jtasklife->time);
 	jtasklife->jtype = JOURNAL_TYPE_TASKEXIT;
 	jtasklife->flags = task->flags;
 	jtasklife->filler = 0xFFFF;
@@ -146,8 +181,10 @@ void journal_task_exit(struct dtask *task)
 
 void journal_ipc_init(ipc_t *ipc)
 {
+    uint32_t tv_sec;
+
 	struct journal_ipclife *jipclife = (struct journal_ipclife *)JOURNAL_CLASS2_NEXTRECORD;
-	jipclife->time = tick();
+	bsp_gettime(&tv_sec, &jipclife->time);
 	jipclife->tid = TASK_T(current);
 	jipclife->jtype = JOURNAL_TYPE_IPCINIT;
 	jipclife->ipctype = ipc->type;
@@ -158,8 +195,10 @@ void journal_ipc_init(ipc_t *ipc)
 
 void journal_ipc_destroy(ipc_t *ipc)
 {
+    uint32_t tv_sec;
+
 	struct journal_ipclife *jipclife = (struct journal_ipclife *)JOURNAL_CLASS2_NEXTRECORD;
-	jipclife->time = tick();
+	bsp_gettime(&tv_sec, &jipclife->time);
 	jipclife->tid = TASK_T(current);
 	jipclife->jtype = JOURNAL_TYPE_IPCDESTROY;
 	jipclife->ipctype = ipc->type;

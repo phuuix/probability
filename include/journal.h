@@ -27,7 +27,7 @@
  * Journal
  * 
  **********************************************************************/
-#define JOURNAL_CLASS1_MAXRECORD  64
+#define JOURNAL_CLASS1_MAXRECORD  512
 #define JOURNAL_CLASS2_MAXRECORD  16
 
 enum journal_type
@@ -39,6 +39,7 @@ enum journal_type
 	JOURNAL_TYPE_TASKEXIT,
 	JOURNAL_TYPE_IPCINIT,
 	JOURNAL_TYPE_IPCDESTROY,
+    JOURNAL_TYPE_TIMESTAMP,
 };
 
 struct journal_taskswitch
@@ -62,10 +63,20 @@ struct journal_ipcop
 	ipc_t *ipc_ptr;
 };
 
+struct journal_time
+{
+    uint32_t time;    // ns
+    uint8_t jtype;
+    uint8_t filler;  
+    uint16_t cur_tid; // current task
+    uint32_t tv_sec;  // second
+};
+
 typedef union journal_class1
 {
 	struct journal_taskswitch taskswitch;
 	struct journal_ipcop ipcop;
+    struct journal_time timestamp;
 }journal_class1_t;
 
 struct journal_tasklife
@@ -99,6 +110,9 @@ void journal_memory_free(uint32_t size, void *data, char *file, uint32_t line, t
 void journal_task_switch(struct dtask *from, struct dtask *to);
 void journal_ipc_pend(ipc_t *ipc, task_t task);
 void journal_ipc_post(ipc_t *ipc, task_t task);
+void journal_timestamp();
+void journal_user_defined(uint32_t data1, uint32_t data2);
+
 
 void journal_task_create(struct dtask *task);
 void journal_task_exit(struct dtask *task);

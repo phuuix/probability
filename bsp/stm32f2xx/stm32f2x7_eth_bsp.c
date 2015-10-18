@@ -132,7 +132,7 @@ static void ETH_MACDMA_Config(void)
 
   /* Fill ETH_InitStructure parametrs */
   /*------------------------   MAC   -----------------------------------*/
-#if 1
+#if 0
   ETH_InitStructure.ETH_AutoNegotiation = ETH_AutoNegotiation_Enable;
 #else
   ETH_InitStructure.ETH_AutoNegotiation = ETH_AutoNegotiation_Disable; 
@@ -146,7 +146,8 @@ static void ETH_MACDMA_Config(void)
   ETH_InitStructure.ETH_ReceiveAll = ETH_ReceiveAll_Disable;
   ETH_InitStructure.ETH_BroadcastFramesReception = ETH_BroadcastFramesReception_Enable;
   ETH_InitStructure.ETH_PromiscuousMode = ETH_PromiscuousMode_Disable;
-  ETH_InitStructure.ETH_MulticastFramesFilter = ETH_MulticastFramesFilter_Perfect;
+  //ETH_InitStructure.ETH_MulticastFramesFilter = ETH_MulticastFramesFilter_Perfect;
+  ETH_InitStructure.ETH_MulticastFramesFilter = ETH_MulticastFramesFilter_None;
   ETH_InitStructure.ETH_UnicastFramesFilter = ETH_UnicastFramesFilter_Perfect;
 #ifdef CHECKSUM_BY_HARDWARE
   ETH_InitStructure.ETH_ChecksumOffload = ETH_ChecksumOffload_Enable;

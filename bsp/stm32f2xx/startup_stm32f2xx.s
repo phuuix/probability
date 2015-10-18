@@ -119,16 +119,23 @@ Default_Handler:
   pop  {pc}
   .size  Default_Handler, .-Default_Handler
 
-HardFault_Handler:
+hard_fault_hander:
 	TST lr, #4
 	ITE EQ
 	MRSEQ r0, MSP
 	MRSNE r0, PSP
 	B Hard_Fault_Handler
-.size  HardFault_Handler, .-HardFault_Handler
+.size  hard_fault_hander, .-hard_fault_hander
 
 pendsv_handler:
     cpsid   i                                                   @ Prevent interruption during context switch
+/*  use SCHEDULE_FLAGS_ONGOING to avoid assert(to) failed when pendsv_handler is preempted by other interrupt
+	another method is see below: set current task
+	ldr	r3,=sysschedule_flags                                   @ unset SCHEDULE_FLAGS_ONGOING
+	ldr	r2, [r3, #0]
+	bic.w	r2, r2, #2
+	str	r2, [r3, #0]
+*/
     mrs     r0, psp
     subs    r0, r0, #0x20                                       @ Save remaining regs r4-11 on process stack
     stm     r0, {r4-r11}
@@ -140,6 +147,9 @@ pendsv_handler:
     ldr r1,=interrupt_to_task
     ldr r1,[r1]
     ldr r0,[r1]                 @ get new task's stack pointer into r0
+	
+	ldr r2,=current             @ set current task
+	str r1,[r2]
 	
     ldm     r0, {r4-r11}                                        @ Restore r4-11 from new process stack
     adds    r0, r0, #0x20
@@ -275,7 +285,7 @@ g_pfnVectors:
    .thumb_set NMI_Handler,Default_Handler
   
    .weak      HardFault_Handler
-   .thumb_set HardFault_Handler,Default_Handler
+   .thumb_set HardFault_Handler,hard_fault_hander
   
    .weak      MemManage_Handler
    .thumb_set MemManage_Handler,Default_Handler

@@ -729,6 +729,8 @@ int zllctrl_post_zll_message(uint8_t *message, uint16_t length)
         zllmail.data = rpcmsg;
         zllmail.length = length;
 
+        //kprintf("zllctrl_post_zll_message %d: 0x%02x 0x%02x\n", length, message[2], message[3]);
+
         ret = mbox_post(&g_zll_mbox, (uint32_t *)&zllmail);
     }
     else
@@ -874,7 +876,7 @@ static void zllctrl_task(void *p)
     /* create timer table */
     ret = ptimer_init(&g_zll_timer_table, 16 /* nSlot */);
     assert(ret == 0);
-
+#if 0
 	/* connect to Soc */
 	ret = zllctrl_connect_to_soc(hue);
 	if(ret != 0)
@@ -892,7 +894,7 @@ static void zllctrl_task(void *p)
 		uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "failed to establish network: ret=%d\n", ret);
 		return;
 	}
-
+#endif
     zllctrl_set_state(hue, HUE_STATE_NETSETUP);
 
     ssdp_init();

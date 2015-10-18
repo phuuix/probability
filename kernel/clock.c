@@ -29,7 +29,6 @@
 
 uint32_t sys_passed_ticks;
 uint32_t sys_passed_secs;
-uint32_t sys_time_calibration;
 
 static void check_delay()
 {
@@ -38,7 +37,8 @@ static void check_delay()
 
 static void timer_handler()
 {
-	static uint16_t ticks = 0;
+	static uint32_t last_ns = 0;
+    uint32_t s, ns;
 	uint32_t f;
 	struct dtask *task;
 
@@ -49,26 +49,23 @@ static void timer_handler()
 	 *  Warning: if interrupt is disabled over 10ms, then we will loss tick and cause some time (sync) issues.
 	 */
 	sys_passed_ticks++;
-	ticks++;
 
-	if(ticks > TICKS_PER_SECOND)
+    bsp_gettime(&s, &ns);
+	if(ns < last_ns)
 	{
-		/* may required time calibration for some bsp */
-		//bsp_time_calibration();
-		if(sys_time_calibration == 0)
-		{
-			uint32_t s, ns;
-			bsp_gettime(&s, &ns);
-			sys_time_calibration = ns;
-		}
-		
+		/* one second passed */
 		sys_passed_secs ++;
-		ticks -= TICKS_PER_SECOND;
+		
+#ifdef INCLUDE_JOURNAL
+        /* record timerstamp for every 1s */
+        journal_timestamp();
+#endif
 #ifdef INCLUDE_PMCOUNTER
 		/* update PMC CPU usage for every 1s */
 		pmc_calc_cpu_usage();
 #endif
 	}
+    last_ns = ns;
 
 #ifdef INCLUDE_PMCOUNTER
 	/* update PMC_U32_nInterruptInCurrentTick and PMC_U32_nInterruptInLastTick */

@@ -26,7 +26,6 @@ static uint32_t isr_table[MAX_HANDLERS];
 static void dummy_isr_fun(int i);
 extern char _irq_stack_start[];
 extern struct dtask systask[];
-extern uint32_t sys_time_calibration;
 
 void dump_buffer(uint8_t *buffer, uint16_t length)
 {
@@ -45,13 +44,9 @@ void dump_buffer(uint8_t *buffer, uint16_t length)
 
 void bsp_gettime(uint32_t *tv_sec, uint32_t *tv_nsec)
 {
-	uint32_t ns;
-
 	*tv_sec = time(NULL);
 	/* TIM_GetCounter() return us */
-	ns = TIM_GetCounter(TIM2)*1000;
-	//*tv_nsec = ns;
-	*tv_nsec = (ns >= sys_time_calibration)? (ns-sys_time_calibration):(1000000000-sys_time_calibration+ns);
+	*tv_nsec = TIM_GetCounter(TIM2)*1000;
 }
 
 
@@ -188,14 +183,17 @@ static void dummy_isr_fun(int i)
 	kprintf("Unhandled interrupt %d occured!!!\n", i);
 
     panic("Unhandled interrupt\n");
-	
-	while(1);
 }
 
 
 enum { r0, r1, r2, r3, r12, lr, pc, psr};
 
-
+/* If the funciton calls at least other function
+ *   ASM code always push {r7, lr}
+ * else
+ *   ASM code push {r7}
+ * r7 is later modified to indicate the bottom of stack.
+ */
 void Hard_Fault_Handler(uint32_t stack[])
 {
     /* get LR to detect if MSP or PSP is used */
@@ -241,7 +239,7 @@ void interrupt_init()
 	NVIC_SetPriorityGrouping(0x07);
 
 	/* set PENDSV's priority to highest */
-	NVIC_SetPriority(PendSV_IRQn, 0); // set prio to 0 will fault, why?
+	NVIC_SetPriority(PendSV_IRQn, 15); // set prio to 0 will fault, why?
 
 	/* set SysTick's priority to lowest */
 	NVIC_SetPriority(SysTick_IRQn, 15);
@@ -373,6 +371,7 @@ void panic(char *infostr)
 	journal_dump();
 	pmc_dump();
 	
+    __ASM("bkpt");
     while(1);
 }
 

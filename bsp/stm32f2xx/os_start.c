@@ -40,7 +40,7 @@ extern void kservice_init();
 extern void lwip_sys_init();
 extern void lwip_perf_init();
 extern void ETH_BSP_Config(void);
-
+extern void http_server_netconn_init();
 extern void usbh_cdc_init();
 
 #ifdef INCLUDE_USER_APP_INIT
@@ -91,8 +91,6 @@ static void root_task(void *p)
 	console_init();
 	kprintf("  Console subsystem inited.\n");
 
-	udelay_init();
-	
 #ifdef INLCUDE_KSERV
 	kservice_init();
 	kprintf("  kservice task started.\n");
@@ -109,21 +107,24 @@ static void root_task(void *p)
 	#endif /* INCLUDE_GDB_STUB */
 
 	// old usbh conflict with RLC8021 pin assignment
-	//usbh_cdc_init();
+	cc2530ctrl_init();
 	
 	#ifdef INCLUDE_NETWORK
-	net_task_init();
+	//net_task_init();
 	ETH_BSP_Config();  // ETH base address: 0x40028000
 	lwip_sys_init();
 	//lwip_perf_init();
 	http_server_netconn_init();
 	kprintf("  net inited.\n");
 	#endif
+
+	udelay_init();
 	
 	user_app_init();
-	
+
 	kprintf("  Root task ended.\n");
 }
+
 static void root_task_init()
 {
 	task_t t;
@@ -192,7 +193,7 @@ void TIM_init()
 void os_hw_init()
 {
 	/* init USART */
-	uart_init(SERIAL_UART_PORT, SERIAL_UART_BAUDRATE);
+	uart_init(SERIAL_UART_PORT, SERIAL_UART_BAUDRATE, 0);
 
 	/* init interrupt related matters */
 	interrupt_init();

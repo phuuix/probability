@@ -23,6 +23,7 @@
 #include "uart.h"
 #include "uprintf.h"
 #include "net/net_task.h"
+#include "stm32f2x7_eth_bsp.h"
 
 char _irq_stack_start[1024];
 
@@ -80,8 +81,6 @@ void udelay_init()
 
 static void root_task(void *p)
 {
-	//kprintf("  Root task started...\n");
-
 	clock_init(INT_SYSTICK);
 	systick_init();
 	kprintf("  Clock subsystem inited.\n");
@@ -110,7 +109,7 @@ static void root_task(void *p)
 	usbh_cdc_init();
 	
 	#ifdef INCLUDE_NETWORK
-	net_task_init();
+	//net_task_init();
 	ETH_BSP_Config();  // ETH base address: 0x40028000
 	lwip_sys_init();
 	//lwip_perf_init();
@@ -193,7 +192,7 @@ void TIM_init()
 void os_hw_init()
 {
 	/* init USART */
-	uart_init(SERIAL_UART_PORT, SERIAL_UART_BAUDRATE);
+	uart_init(SERIAL_UART_PORT, SERIAL_UART_BAUDRATE, 0);
 
 	/* init interrupt related matters */
 	interrupt_init();

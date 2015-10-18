@@ -1684,19 +1684,23 @@ static void processRpcSysZdo(uint8_t *rpcBuff)
   	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: device announce ind, srcAddr=0x%x nwkAddr=0x%x IEEEAddr=0x%08x%08x\n", 
         *(uint16_t *)&rpcBuff[2], addr, *(uint32_t *)&rpcBuff[6], *(uint32_t *)&rpcBuff[10]);
     // TODO: to fetch this device's info
-#if 0
-    /* add the new device to light list... */
+#if 1
+    /* add the new device to light list... 
+     * FIXME: just assuem this is a light */
     light = zllctrl_find_light_by_ieeeaddr(&rpcBuff[6]);
     if(light == NULL)
     {
-      light = zllctrl_create_light(epInfo);
-
-      /* TODO: get state of new light */
+      if(gNumHueLight < HUE_MAX_LIGHTS)
+      {
+        light = &gHueLight[gNumHueLight++];
+      }
     }
 
-    if(light != NULL)
+    if(light)
     {
       light->reachable = 1;
+      light->ep_info.nwkAddr = BUILD_UINT16(rpcBuff[4], rpcBuff[5]);
+      memcpy(light->ep_info.IEEEAddr, &rpcBuff[6], 8);
     }
 #endif
   }

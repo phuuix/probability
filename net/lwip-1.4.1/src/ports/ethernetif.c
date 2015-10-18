@@ -57,6 +57,7 @@
 #include "stm32f2x7_eth.h"
 #include <string.h>
 #include "uprintf.h"
+#include "journal.h"
 #include "net/net_task.h"
 
 #define netifMTU                                (1500)
@@ -85,6 +86,7 @@ extern ETH_DMADESCTypeDef  *DMARxDescToGet;
 extern ETH_DMA_Rx_Frame_infos *DMA_RX_FRAME_infos;
 
 
+extern void netevent_add();
 
 
 static void ethernetif_input( void * pvParameters );
@@ -171,6 +173,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   struct pbuf *q;
   uint32_t l = 0;
   uint8_t *buffer ;
+  uint8_t *packet;
    
   while((ETH_GetDMATxDescFlagStatus(DMATxDescToSet, ETH_DMATxDesc_OWN) != (uint32_t)RESET) & (l<10))
   {
@@ -182,13 +185,23 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   {
   	l = 0;
     buffer =  (uint8_t *)(DMATxDescToSet->Buffer1Addr);
+
+    packet = (uint8_t *)p->payload;
+    uprintf(UPRINT_DEBUG, UPRINT_BLK_NET, "low_level_output %d bytes: 0x%08x 0x%08x 0x%08x\n", p->tot_len,
+            *(uint32_t *)&packet[12], *(uint32_t *)&packet[20], *(uint32_t *)&packet[34]);
+    if((packet[12] == 0x08) && (packet[13] == 0x00))
+    {
+      // IP packet
+      if(packet[23] == IP_PROTO_ICMP)
+        journal_user_defined((0xF1<<24), *(uint32_t *)&packet[34]);
+    }
+
     for(q = p; q != NULL; q = q->next) 
     {
       memcpy((u8_t*)&buffer[l], q->payload, q->len);
-	  uprintf(UPRINT_DEBUG, UPRINT_BLK_NET, "low_level_output: \n");
-	  //dump_buffer(&buffer[l], q->len);
       l = l + q->len;
     }
+    
     ETH_Prepare_Transmit_Descriptors(l);
   }
   else
@@ -296,10 +309,23 @@ void ethernetif_input( void * pvParameters )
 {
   struct pbuf *p;
   struct netif *s_pxNetIf = (struct netif *)pvParameters;
+  uint8_t *packet;
 
-  uprintf(UPRINT_DEBUG, UPRINT_BLK_NET, "netjob: ethernetif_input()\n");
-  
   p = low_level_input( s_pxNetIf );
+  packet = (uint8_t *)p->payload;
+
+  // packet[12-13]: eth protocol
+  // packet[23]: ip protocol
+  // packet[34-37]: port
+  uprintf(UPRINT_DEBUG, UPRINT_BLK_NET, "ethernetif_input() %d bytes: 0x%02x 0x%08x 0x%08x 0x%08x\n", p->tot_len,
+            *(uint32_t *)&packet[12], packet[23], *(uint32_t *)&packet[34], *(uint32_t *)&packet[38]);
+  if((packet[12] == 0x08) && (packet[13] == 0x00))
+  {
+    // IP packet
+    if(packet[23] == IP_PROTO_ICMP)
+      journal_user_defined((0xF0<<24), *(uint32_t *)&packet[34]);
+  }
+
   if (p && ERR_OK != s_pxNetIf->input( p, s_pxNetIf))
   {
   	uprintf(UPRINT_ERROR, UPRINT_BLK_NET, "eth input error\n");
@@ -308,16 +334,14 @@ void ethernetif_input( void * pvParameters )
   }
 }  
 
+
 void ethernetif_isr(int irq)
 {
-	uint32_t ret;
-	
 	/* Frame received */
 	if ( ETH_GetDMAFlagStatus(ETH_DMA_FLAG_R) == SET) 
 	{
-		/* wakeup net task (better solution is post a input message to tcpip_thread */
-		ret = net_task_job_add(ethernetif_input, &xnetif);
-		assert(ret == ROK);
+		/* post a input message to tcpip_thread */
+        ethernetif_input(&xnetif);
 	}
 
 	/* Clear the interrupt flags. */

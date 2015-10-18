@@ -11,7 +11,7 @@ C_FILES = console.c os_start.c stm32f2xx_usart.c stm32f2xx_gpio.c stm32f2xx_sysc
 	uart.c core_cm3.c cli.c stm32f2xx_rcc.c misc.c stm32f2xx_exti.c \
 	usb_core.c usbh_bsp.c\
 	usbh_core.c usbh_cdc_core.c usbh_hcs.c usbh_ioreq.c usbh_stdreq.c usbh_usr.c \
-	usb_hcd.c usb_hcd_int.c
+	usb_hcd.c usb_hcd_int.c cc2530ctrl.c
 	
 # usb device files: 
 #  usb_app.c usbd_bsp.c usbd_desc.c usbd_usr.c usb_dcd.c usb_dcd_int.c \
@@ -32,6 +32,7 @@ all: dooloo dooloo.bin
 clean :
 	$(RM) *.o
 	$(RM) $(LIB_PATH)/libbsp.a .depend 
+	$(RM) dooloo dooloo.bin
 
 dep : .depend
 
