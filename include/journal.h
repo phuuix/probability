@@ -27,7 +27,7 @@
  * Journal
  * 
  **********************************************************************/
-#define JOURNAL_CLASS1_MAXRECORD  512
+#define JOURNAL_CLASS1_MAXRECORD  128
 #define JOURNAL_CLASS2_MAXRECORD  16
 
 enum journal_type

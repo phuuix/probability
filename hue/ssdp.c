@@ -92,7 +92,7 @@ uint32_t ssdp_timeout(void *tim, uint32_t param1, uint32_t param2)
 
     if(ip != SSDP_IPADDR)
     {
-        uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "SSDP state %d transmit to ip=0x%08x port=%d\n", state, ip, port);
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "SSDP state %d transmit to ip=0x%08x port=%d\n", state, ip, port);
         isMulticase = 0;
     }
 
@@ -168,8 +168,7 @@ uint32_t ssdp_timeout(void *tim, uint32_t param1, uint32_t param2)
     
     if(!isMulticase)
     {
-        task_delay(5);
-        kprintf("SSDP Tx: %s\n", outp);
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "SSDP Tx: %s\n", outp);
     }
 
     /* send ssdp alive notify */
@@ -205,8 +204,8 @@ void ssdp_recv(void *arg, struct udp_pcb *upcb,
 
     if(strstr(ssdp_discovery, "ssdp:discover"))
     {
-        uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "Rx SSDP packet: port=%d size=%d content:\n", port, p->tot_len);
-        uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "%s\n", ssdp_discovery);
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "Rx SSDP packet: port=%d size=%d content:\n", port, p->tot_len);
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "%s\n", ssdp_discovery);
 
         /* send a mail to re-start SSDP state machine */
         huemail.ssdp.cmd = HUE_MAIL_CMD_SSDP;

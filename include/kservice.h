@@ -19,14 +19,14 @@
 #ifndef __KSERVICE_H__
 #define __KSERVICE_H__
 
-typedef int (*kserv_func_t)(uint32_t param1, uint32_t param2);
+typedef uint32_t (*kserv_func_t)(void *timer, uint32_t param1, uint32_t param2);
 
 typedef struct kserv_mail
 {
-	uint8_t priority;
-	/* flags bit 0~1: period unit -- tick, s, minute, hour */
-	uint8_t flags;
-	uint16_t period;
+    uint32_t priority:8;
+    uint32_t periodic:1; 
+    uint32_t timeunit:7;         /* tick, s, minute, hour */
+    uint32_t interval:16;
 	kserv_func_t func;
 	uint32_t param[2];
 }kserv_mail_t;

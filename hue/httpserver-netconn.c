@@ -20,6 +20,8 @@
 #define HTTPD_DEBUG         LWIP_DBG_OFF
 #endif
 
+#define HTTP_THREAD_STACKSIZE 0x800
+#define HTTP_THREAD_PRIO      0x4
 
 const static char http_html_hdr[] = "HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\n";
 const static char http_index_html[] = "<html><head><title>Probability</title></head><body><h1>Welcome to Probability HTTP server!</h1><p>Please use HUE JSON API to access.</body></html>";
@@ -344,9 +346,32 @@ static int http_serv_put(struct netconn *conn, http_parser_t *http_parser, char 
                 bitmap |= (1<<HUE_STATE_BIT_SAT);
                 in_light->sat= json_state->valueint;
             }
+
+            json_state = cJSON_GetObjectItem(json_root, "xy");
+            if(json_state && (json_state->type == cJSON_Array))
+            {
+                cJSON *json_x, *json_y;
+
+                json_x = cJSON_GetArrayItem(json_state, 0);
+                json_y = cJSON_GetArrayItem(json_state, 0);
+                if(json_x && json_y)
+                {
+                    bitmap |= (1<<HUE_STATE_BIT_XY);
+                    in_light->x = json_x->valuedouble * (1<<16); // xy in Q0.16
+                    in_light->y = json_y->valuedouble * (1<<16);
+                    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "set xy [%d %d]\n", in_light->x, in_light->y);
+                }
+            }
+
+            json_state = cJSON_GetObjectItem(json_root, "ct");
+            if(json_state)
+            {
+                bitmap |= (1<<HUE_STATE_BIT_CT);
+                in_light->ct= json_state->valueint;
+            }
         }
 
-        uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "set light %d bitmap: %x\n", light_id, bitmap);
+        uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "set light %d bitmap: 0x%x\n", light_id, bitmap);
 
         memcpy(responseBuf, http_json_hdr, sizeof(http_json_hdr)-1);
         responseBuf_len += sizeof(http_json_hdr)-1;
@@ -384,8 +409,8 @@ http_server_netconn_serve(struct netconn *conn)
     requestBuf[requestBuf_len] = '\0';
 
     // for debug
-    task_delay(5);
-    kprintf("http packet: %s\n", (char *)requestBuf);
+    uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "http packet: %s\n", (char *)requestBuf);
+    
 
     memset(&http_parser, 0, sizeof(http_parser));
     http_parse_request(requestBuf, requestBuf_len, &http_parser);
@@ -398,10 +423,12 @@ http_server_netconn_serve(struct netconn *conn)
 	}
     else if(http_parser.req_type == HTTP_REQTYPE_POST && http_parser.content_type == HTTP_CONTENTTYPE_JSON)
     {
+      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "http content: %s\n", http_parser.content);
       responseBuf_len = http_serv_post(conn, &http_parser, responseBuf, HTTP_RESP_BUFF_SIZE);
     }
 	else if(http_parser.req_type == HTTP_REQTYPE_PUT && http_parser.content_type == HTTP_CONTENTTYPE_JSON)
     {
+      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "http content: %s\n", http_parser.content);
       responseBuf_len = http_serv_put(conn, &http_parser, responseBuf, HTTP_RESP_BUFF_SIZE);
     }
 
@@ -409,8 +436,7 @@ http_server_netconn_serve(struct netconn *conn)
     {
       netconn_write(conn,responseBuf,responseBuf_len,NETCONN_NOCOPY);
 
-      task_delay(10);
-      kprintf("HTTP Response: %s\n", responseBuf);
+      uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "http response: %s\n", (char *)responseBuf);
     }
     else
     {
@@ -465,7 +491,7 @@ http_server_netconn_thread(void *arg)
 void
 http_server_netconn_init()
 {
-  sys_thread_new("thttpd", http_server_netconn_thread, NULL, DEFAULT_THREAD_STACKSIZE, DEFAULT_THREAD_PRIO);
+  sys_thread_new("thttpd", http_server_netconn_thread, NULL, HTTP_THREAD_STACKSIZE, HTTP_THREAD_PRIO);
 }
 
 #endif /* LWIP_NETCONN*/

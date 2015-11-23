@@ -526,7 +526,7 @@ uint32_t zllSocSetHueSat(uint8_t *cmbbuf, uint8_t hue, uint8_t sat, uint16_t tim
     addrMode,
 		0x01, //ZCL Header Frame Control
 		transSeqNumber++,
-		0x06, //ZCL Header Frame Command (COMMAND_LEVEL_MOVE_TO_HUE_AND_SAT)
+		COMMAND_LIGHTING_MOVE_TO_HUE_AND_SATURATION, 
 		hue, //HUE - fill it in later
 		sat, //SAT - fill it in later
 		(time & 0xff),
@@ -572,7 +572,7 @@ uint32_t zllSocSetColor(uint8_t *cmbbuf, uint16_t x, uint16_t y, uint16_t time, 
     addrMode,
 		0x01, //ZCL Header Frame Control
 		transSeqNumber++,
-		COMMAND_LIGHTING_MOVE_TO_COLOR, //ZCL Header Frame Command (COMMAND_LEVEL_MOVE_TO_HUE_AND_SAT)
+		COMMAND_LIGHTING_MOVE_TO_COLOR, 
 		(x & 0xff), //x
 		(x & 0xff00) >> 8,
 		(y & 0xff), //y
@@ -595,13 +595,46 @@ uint32_t zllSocSetColor(uint8_t *cmbbuf, uint16_t x, uint16_t y, uint16_t time, 
  *
  * @brief   Send the set color temperature command to a ZLL light. (not supported!!!)
  *
- * @param   ct - 
+ * @param   ct - color temperature
  * @param   dstAddr - Nwk Addr or Group ID of the Light(s) to be controled.
  * @param   endpoint - endpoint of the Light.
  * @param   addrMode - Unicast or Group cast.
  *
  * @return  none
  */
+uint32_t zllSocSetColorTemperature(uint8_t *cmbbuf, uint16_t ct, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode)
+{
+    uint8_t cmd[] = { 
+        0xFE, 
+        15, //RPC payload Len
+        0x29, //MT_RPC_CMD_AREQ + MT_RPC_SYS_APP
+        0x00, //MT_APP_MSG
+        0x0B, //Application Endpoint         
+        (dstAddr & 0x00ff),
+        (dstAddr & 0xff00) >> 8,
+        endpoint, //Dst EP
+    (ZCL_CLUSTER_ID_LIGHTING_COLOR_CONTROL & 0x00ff),
+    (ZCL_CLUSTER_ID_LIGHTING_COLOR_CONTROL & 0xff00) >> 8,
+        0x08, //Data Len
+    addrMode,
+        0x01, //ZCL Header Frame Control
+        transSeqNumber++,
+        COMMAND_LIGHTING_MOVE_TO_COLOR_TEMPERATURE, 
+        (ct & 0xff), //ct
+		(ct& 0xff00) >> 8, 
+        (time & 0xff),
+        (time & 0xff00) >> 8,
+        0x00 //fcs
+  }; 
+
+  calcFcs(cmd, sizeof(cmd));
+  zllctrl_write(0,cmd,sizeof(cmd));
+
+  if(cmbbuf)
+    memcpy(cmbbuf, cmd, sizeof(cmd));
+  return sizeof(cmd);
+}
+
 
 
 /*********************************************************************
@@ -1371,7 +1404,7 @@ uint32_t zllSocSysNVLength(uint8_t *cmbbuf, uint16_t itemId)
  * @brief   Send set Tx Power command to cc253x.
  *
  * @param   power - Actual TX power setting, in dBm.
- *
+ *          see TILIB macRadioSetTxPower(): TxPower is reset as 1 dBm (0xD5) by default
  * @return  none
  */
 uint32_t zllSocSysSetTxPower(uint8_t *cmbbuf, uint8_t power)
@@ -1622,7 +1655,7 @@ static void processRpcSysApp(uint8_t *rpcBuff)
   {
     if( rpcBuff[2] == 0)
     {
-      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysApp: Command Received Successfully\n\n");
+      uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "processRpcSysApp: Command Received Successfully\n\n");
     }
     else
     {
@@ -1716,14 +1749,15 @@ static void processRpcSysZdo(uint8_t *rpcBuff)
 static void processRpcSysSys(uint8_t *rpcBuff)
 {
   hue_t *hue = zllctrl_get_hue();
+  uint8_t cmd1 = rpcBuff[1];
 	
   // rpcBuff[1]: cmd1
-  if(rpcBuff[1] == MT_SYS_PING) 
+  if(cmd1 == MT_SYS_PING) 
   {
     uint16_t Capabilities = *(uint16_t *)&rpcBuff[2];
   	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysSys: ping successful\n", Capabilities);
   }
-  else if(rpcBuff[1] == MT_SYS_VERSION)
+  else if(cmd1 == MT_SYS_VERSION)
   {
   	hue->transport_rev = hue->socbuf[MT_RPC_POS_DAT0];
     hue->product_id = hue->socbuf[MT_RPC_POS_DAT0+1];
@@ -1734,9 +1768,24 @@ static void processRpcSysSys(uint8_t *rpcBuff)
             hue->transport_rev, hue->product_id,
             hue->major_rel, hue->minor_rel, hue->maint_rel);
   }
+  else if(cmd1 == MT_SYS_SET_TX_POWER)
+  {
+    uint8_t txpower = rpcBuff[2];
+    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysSys: set TxPower to %d dBm successfull\n", txpower);
+  }
+  else if(cmd1 == MT_SYS_RESET_IND)
+  {
+    uint8_t reason = rpcBuff[2];
+    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysSys: reset indication, reason=%d\n", reason);
+  }
+  else if(cmd1 == MT_SYS_OSAL_TIMER_EXPIRED)
+  {
+    uint8_t timer_id = rpcBuff[2];
+    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysSys: timer expired, reason=%d\n", timer_id);
+  }
   else
   {
-    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysZDO: unknown cmd1=0x%x\n", rpcBuff[1]);
+    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysSys: unknown cmd1=0x%x\n", cmd1);
   }
 }
 
@@ -1780,7 +1829,7 @@ void zllSocProcessRpc (uint8_t *rpcBuff, uint16_t length)
   rpcLen = rpcBuff[1];
   if ( (sofByte == MT_RPC_SOF) && (length == rpcLen+4))
   {         
-      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "zllSocProcessRpc: Processing CMD0:%x, CMD1:%x\n", rpcBuff[2], rpcBuff[3] );
+      uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "zllSocProcessRpc: Processing CMD0:%x, CMD1:%x\n", rpcBuff[2], rpcBuff[3] );
       //Read CMD0
       switch (rpcBuff[2] & MT_RPC_SUBSYSTEM_MASK) 
       {

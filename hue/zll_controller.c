@@ -17,6 +17,8 @@
 #include "zll_controller.h"
 #include "zllSocCmd.h"
 #include "zcl_ll.h"
+#include "stm32f2xx_gpio.h"
+#include "stm32f2xx_rcc.h"
 
 mbox_t g_hue_mbox;  // Rx message from HTTP or console
 mbox_t g_zll_mbox;  // Rx message from ZLL
@@ -33,7 +35,7 @@ static char zll_task_stack[TZLL_STACK_SIZE];
 
 void commandUsage( void );
 void zllctrl_process_console_command( char *cmdBuff );
-void getConsoleCommandParams(char* cmdBuff, uint16_t *nwkAddr, uint8_t *addrMode, uint8_t *ep, uint8_t *value, uint16_t *transitionTime);
+void getConsoleCommandParams(char* cmdBuff, uint16_t *nwkAddr, uint8_t *addrMode, uint8_t *ep, uint16_t *value, uint16_t *transitionTime);
 uint32_t getParam( char *cmdBuff, char *paramId, uint32_t *paramInt);
 
 extern void ssdp_statemachine_init(uint32_t destIp, uint32_t destPort, uint16_t interval);
@@ -42,7 +44,7 @@ extern int ssdp_init();
 static uint16_t savedNwkAddr;    
 static uint8_t savedAddrMode;    
 static uint8_t savedEp;    
-static uint8_t savedValue;    
+static uint16_t savedValue;    
 static uint16_t savedTransitionTime; 
 
 void commandUsage( void )
@@ -75,21 +77,13 @@ void commandUsage( void )
     
     uprintf_default("The below example  will send a MoveToHue command to network address 0x0003\n");
     uprintf_default("end point 0xb, which will cause the device to move to a red hue over 3s\n");
-    uprintf_default("(be sure that the saturation is set high to see the change):\n");
     uprintf_default("sethue -n0x0003 -e0xb -m0x2 -v0 -t30\n\n");
     
-    uprintf_default("parameters are remembered, so the blow command directly after the above will\n");
-    uprintf_default("change to a blue hue:\n");    
-    uprintf_default("sethue -v0xAA \n\n");
-    
-    uprintf_default("The value of hue is a 0x0-0xFF representation of the 360Deg color wheel where:\n");
-    uprintf_default("0Deg or 0x0 is red\n");
-    uprintf_default("120Deg or 0x55 is a green hue\n");
-    uprintf_default("240Deg or 0xAA is a blue hue\n\n");
+    uprintf_default("parameters are remembered, 0x55 is a green hue, 0xAA is a blue hue\n");
+    uprintf_default("change to a blue hue: sethue -v0xAA \n\n");    
     
     uprintf_default("The value of saturation is a 0x0-0xFE value where:\n");
-    uprintf_default("0x0 is white\n");
-    uprintf_default("0xFE is the fully saturated color specified by the hue value\n");        
+    uprintf_default("0x0 is white and 0xFE is the fully saturated color specified by the hue value\n");
 }
 
 int zllctrl_post_console_command(char *command)
@@ -109,7 +103,7 @@ void zllctrl_process_console_command( char *cmdBuff )
   uint16_t nwkAddr;
   uint8_t addrMode;
   uint8_t endpoint;
-  uint8_t value;
+  uint16_t value;
   uint16_t transitionTime;
   
   getConsoleCommandParams(cmdBuff, &nwkAddr, &addrMode, &endpoint, &value, &transitionTime);   
@@ -118,6 +112,11 @@ void zllctrl_process_console_command( char *cmdBuff )
   {
   	zllSocSysPing(NULL);
 	uprintf_default("ping command executed\n\n");
+  }
+  else if((strstr(cmdBuff, "txpower")) != 0)
+  {
+    zllSocSysSetTxPower(NULL, value);
+    uprintf_default("set Tx Power: %d dBm\n\n", value);
   }
   else if((strstr(cmdBuff, "touchlink")) != 0)
   {      
@@ -169,7 +168,14 @@ void zllctrl_process_console_command( char *cmdBuff )
     uprintf_default("setsat command executed with params: \n");
     uprintf_default("    Network Addr    :0x%04x\n    End Point       :0x%02x\n    Addr Mode       :0x%02x\n    Value           :0x%02x\n    Transition Time :0x%04x\n\n", 
       nwkAddr, endpoint, addrMode, value, transitionTime);
-  }   
+  }
+  else if((strstr(cmdBuff, "setct")) != 0)
+  {
+    zllSocSetColorTemperature(NULL, value, transitionTime, nwkAddr, endpoint, addrMode);    
+    uprintf_default("setct command executed with params: \n");
+    uprintf_default("    Network Addr    :0x%04x\n    End Point       :0x%02x\n    Addr Mode       :0x%02x\n    Value           :0x%02x\n    Transition Time :0x%04x\n\n", 
+      nwkAddr, endpoint, addrMode, value, transitionTime);
+  }
   else if((strstr(cmdBuff, "getstate")) != 0)
   {    
     zllSocGetState(NULL, nwkAddr, endpoint, addrMode);
@@ -205,7 +211,7 @@ void zllctrl_process_console_command( char *cmdBuff )
   }    
 }
 
-void getConsoleCommandParams(char* cmdBuff, uint16_t *nwkAddr, uint8_t *addrMode, uint8_t *ep, uint8_t *value, uint16_t *transitionTime)
+void getConsoleCommandParams(char* cmdBuff, uint16_t *nwkAddr, uint8_t *addrMode, uint8_t *ep, uint16_t *value, uint16_t *transitionTime)
 { 
   //set some default values
   uint32_t tmpInt;     
@@ -224,7 +230,7 @@ void getConsoleCommandParams(char* cmdBuff, uint16_t *nwkAddr, uint8_t *addrMode
   }
   if( getParam( cmdBuff, "-v", &tmpInt) )
   {
-    savedValue = (uint8_t) tmpInt;
+    savedValue = (uint16_t) tmpInt;
   }
   if( getParam( cmdBuff, "-t", &tmpInt) )
   {
@@ -454,12 +460,12 @@ uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
     if(bitmap & (1<<HUE_LIGHT_STATE_XY))
     {
         zllSocSetColor(cmdbuf, newlight->x, newlight->y, time, dstAddr, endpoint, addrMode);
-        // xy TBD
     }
 
     if(bitmap & (1<<HUE_LIGHT_STATE_CT))
     {
-        uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unsupported hue state: ct\n");
+        uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "set ct: 0x%x\n", newlight->ct);
+        zllSocSetColorTemperature(cmdbuf, newlight->ct, time, dstAddr, endpoint, addrMode);
     }
 
     if(bitmap & (1<<HUE_LIGHT_STATE_ALERT))
@@ -543,12 +549,65 @@ uint32_t zllctrl_process_json_message(hue_t *hue, hue_mail_t *huemail)
 }
 
 
+static void zllctrl_gpio_init()
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+	GPIO_Init(GPIOE, &GPIO_InitStructure);
+
+    GPIO_SetBits(GPIOE, GPIO_Pin_4); // power led
+    GPIO_SetBits(GPIOE, GPIO_Pin_2); // zigbee status led
+
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+	GPIO_Init(GPIOE, &GPIO_InitStructure);
+}
+
+static uint32_t button_monitor(void *tim, uint32_t param0, uint32_t param1)
+{
+    uint8_t status;
+    uint32_t now = tick();
+    ptimer_t *timer = (ptimer_t *)tim;
+
+    status = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
+    if((status == Bit_RESET) && (now - param0 > 300))
+    {
+        // button active and 3s after last touchlink
+        uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "touchlink ...\n");
+        zllSocTouchLink(NULL);
+        timer->param[0] = now;
+    }
+
+    return 0;
+}
+
+
 static uint32_t zllctrl_mainloop(hue_t *hue)
 {
     hue_mail_t huemail;
     zll_mail_t zllmail;
     int ret;
     uint32_t t1, t2;
+    ptimer_t buttontimer;
+
+    /* init GPIO: PE0/2/3/4 is LED and PE1 is touchlink button */
+    zllctrl_gpio_init();
+
+    /* start a timer to monitor button event (via gpio) every 0.5s */
+    buttontimer.flags = PTIMER_FLAG_PERIODIC;
+    buttontimer.onexpired_func = button_monitor;
+    buttontimer.param[0] = 0; // param[0] represent the last time of touchlink
+    ptimer_start(&g_zll_timer_table, &buttontimer, 10);
 
     t1 = tick();
     /* after network is established, begin event loop */
@@ -830,7 +889,6 @@ uint32_t zllctrl_network_setup(hue_t *hue)
 {
 	uint32_t ret;
     
-
     /* touch link: encapsulated in a app message */
     zllSocTouchLink(NULL);
     ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, NULL);
@@ -876,7 +934,7 @@ static void zllctrl_task(void *p)
     /* create timer table */
     ret = ptimer_init(&g_zll_timer_table, 16 /* nSlot */);
     assert(ret == 0);
-#if 0
+
 	/* connect to Soc */
 	ret = zllctrl_connect_to_soc(hue);
 	if(ret != 0)
@@ -894,7 +952,7 @@ static void zllctrl_task(void *p)
 		uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "failed to establish network: ret=%d\n", ret);
 		return;
 	}
-#endif
+
     zllctrl_set_state(hue, HUE_STATE_NETSETUP);
 
     ssdp_init();

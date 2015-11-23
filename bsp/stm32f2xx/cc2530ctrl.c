@@ -44,9 +44,9 @@ void cc2530ctrl_mail_handle(uint32_t *mail)
 			/* transfer a MT command to Soc */
 			length = (mail[0] & 0x00FF0000)>>16;
 			message = (uint8_t *)mail[1];
-            kprintf("Send MT len=%d msg=0x%x: 0x%08x 0x%08x 0x%08x\n", 
-                length, message, 
-                *(uint32_t *)&message[0], *(uint32_t *)&message[4], *(uint32_t *)&message[8]);
+            //kprintf("Send MT len=%d msg=0x%x: 0x%08x 0x%08x 0x%08x\n", 
+            //    length, message, 
+            //    *(uint32_t *)&message[0], *(uint32_t *)&message[4], *(uint32_t *)&message[8]);
 
 			for(txlen=0; txlen<length; txlen++)
 			{

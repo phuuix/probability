@@ -29,13 +29,12 @@
 #include "probability.h"
 #include "clock.h"
 
-#define KSERV_MAIL_NUM 1
-#define KSERV_TIMEOUT  50
+#define KSERV_MAIL_NUM 2
+#define KSERV_TIMEOUT  2
 #define KSERV_TIMESLOT_NUM  8
+#define KSERV_TIMER_NUM 4
 
 static struct mailbox kmbox;
-//static ptimer_table_t ktime_table;
-//static dllist_node_t ktime_slots[KSERV_TIMESLOT_NUM];
 
 void runled_init()
 {
@@ -68,11 +67,12 @@ void runled_toggle(uint32_t tick)
  */
 static void kserv_task(void *p)
 {
-	short ret;
+	int ret;
 	uint32_t now_tick, last_tick;
 	kserv_mail_t mail;
 	ptimer_table_t ktime_table;
 	dllist_node_t ktime_slots[KSERV_TIMESLOT_NUM];
+    ptimer_t ktime_timer[KSERV_TIMER_NUM];
 	ptimer_t * timer;
 	
 	ptimer_init_nomalloc(&ktime_table, KSERV_TIMESLOT_NUM, ktime_slots);
@@ -84,13 +84,27 @@ static void kserv_task(void *p)
 		switch (ret)
 		{
 			case ROK:
-				#if 0
-				timer = malloc(sizeof(ptimer_t));
-				if(timer){
-					timer->duration
-					ptimer_start(ktime_table, timer, mail.period);
-				}
-				#endif
+                if(mail.func)
+                {
+                    int i;
+                    
+                    /* find a free timer */
+                    timer=NULL;
+                    for(i=0; i<KSERV_TIMER_NUM; i++)
+                    {
+                        if(!ptimer_is_running(&ktime_timer[i]))
+                            timer = &ktime_timer[i];
+                    }
+
+                    if(timer)
+                    {
+                        timer->onexpired_func = mail.func;
+                        timer->param[0] = mail.param[0];
+                        timer->param[1] = mail.param[1];
+                        timer->flags = mail.periodic*2;
+                        ptimer_start(&ktime_table, timer, mail.interval);
+                    }
+                }
 			case RTIMEOUT:
 				now_tick = tick();
 				ptimer_consume_time(&ktime_table, now_tick-last_tick);

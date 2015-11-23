@@ -193,7 +193,10 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
     {
       // IP packet
       if(packet[23] == IP_PROTO_ICMP)
+      {
         journal_user_defined((0xF1<<24), *(uint32_t *)&packet[34]);
+        uprintf(UPRINT_INFO, UPRINT_BLK_NET, "ping response\n");
+      }
     }
 
     for(q = p; q != NULL; q = q->next) 
@@ -318,12 +321,15 @@ void ethernetif_input( void * pvParameters )
   // packet[23]: ip protocol
   // packet[34-37]: port
   uprintf(UPRINT_DEBUG, UPRINT_BLK_NET, "ethernetif_input() %d bytes: 0x%02x 0x%08x 0x%08x 0x%08x\n", p->tot_len,
-            *(uint32_t *)&packet[12], packet[23], *(uint32_t *)&packet[34], *(uint32_t *)&packet[38]);
+          *(uint32_t *)&packet[12], packet[23], *(uint32_t *)&packet[34], *(uint32_t *)&packet[38]);
   if((packet[12] == 0x08) && (packet[13] == 0x00))
   {
     // IP packet
     if(packet[23] == IP_PROTO_ICMP)
+    {
       journal_user_defined((0xF0<<24), *(uint32_t *)&packet[34]);
+      uprintf(UPRINT_INFO, UPRINT_BLK_NET, "ping from %d.%d.%d.%d\n", packet[26], packet[27], packet[28], packet[29]);
+    }
   }
 
   if (p && ERR_OK != s_pxNetIf->input( p, s_pxNetIf))

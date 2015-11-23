@@ -97,6 +97,7 @@ uint32_t zllSocAddGroup(uint8_t *cmbbuf, uint16_t groupId, uint16_t dstAddr, uin
 uint32_t zllSocStoreScene(uint8_t *cmbbuf, uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
 uint32_t zllSocRecallScene(uint8_t *cmbbuf, uint16_t groupId, uint8_t sceneId, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
 uint32_t zllSocBind(uint8_t *cmbbuf, uint16_t srcNwkAddr, uint8_t srcEndpoint, uint8_t srcIEEE[8], uint8_t dstEndpoint, uint8_t dstIEEE[8], uint16_t clusterID);
+uint32_t zllSocSetColorTemperature(uint8_t *cmbbuf, uint16_t ct, uint16_t time, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
 //ZCL Get API's
 uint32_t zllSocGetState(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
 uint32_t zllSocGetLevel(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8_t addrMode);
@@ -105,6 +106,7 @@ uint32_t zllSocGetSat(uint8_t *cmbbuf, uint16_t dstAddr, uint8_t endpoint, uint8
 uint32_t zllSocSysPing(uint8_t *cmbbuf);
 uint32_t zllSocSysVersion(uint8_t *cmbbuf);
 uint32_t zllSocUtilGetDevInfo(uint8_t *cmbbuf);
+uint32_t zllSocSysSetTxPower(uint8_t *cmbbuf, uint8_t power);
 
 #ifdef __cplusplus
 }

@@ -47,6 +47,36 @@ extern mbox_t g_hue_mbox;
 
 static char hue_tmpstr[64];
 
+/* https://en.wikipedia.org/wiki/Color_temperature#Calculation
+ * McCamy proposed this cubic approximation:
+ *  CCT(x, y) = -449n^3 + 3525n^2 - 6823.3n + 5520.33,
+ * where n = (x - xe)/(y - ye) is the inverse slope line, and (xe = 0.3320, ye = 0.1858) is the "epicenter";
+*/
+uint32_t hue_xy2ct(uint16_t x, uint16_t y)
+{
+    uint32_t ct = 0;
+    double n;
+
+    n = (1.0*x/(1<<16) - 0.3320)/(1.0*y/(1<<16) - 0.1858);
+    ct = -449*n*n*n + 3525*n*n - 6823.3*n + 5520.33;
+    return ct;
+}
+
+/*
+ * Mired: micro reciprocal degree, is a unit of measurement used to express color temperature.
+ * Mired is given by formula: M = 1000000/CCT
+ *
+ * CCT = 7000K~25000K
+ * x = -2.0064(10^9/CCT^3) + 1.9018(10^6/CCT^2) + 0.24748(10^3/CCT) + 0.237040
+ * y = -3x^2 + 2.87x - 0.275
+ * CCT = 4000K~7000K
+ * x = -4.607(10^9/CCT^3) + 2.9678(10^6/CCT^2) + 0.09911(10^3/CCT) + 0.244063
+ * y = -3x^2 + 2.87x - 0.275
+ */
+void hue_ct2xy(uint16_t cct, uint16_t *x, uint16_t *y)
+{
+}
+
 char *hue_get_ip_string()
 {
     uint32_t ip;
@@ -182,6 +212,15 @@ int process_hue_api_rename_light(uint16_t in_light_id, char *newname, char *out_
 	return hue_json_build_rename_light(out_responseBuf, in_max_resp_size, light);
 }
 
+/*
+ * Parameters:
+ *   in_light_id -- the light to be set
+ *   in_light -- the values to be set
+ *   in_bitmap -- indicate which field should be set
+ *   out_responseBuf -- pointer of output buffer
+ *   in_max_resp_size -- the size of output buffer
+ *   return -- the length of output message
+ */
 int process_hue_api_set_light_state(uint16_t in_light_id, hue_light_t *in_light, uint32_t in_bitmap, char *out_responseBuf, uint32_t in_max_resp_size)
 {
 	hue_light_t *light;
@@ -190,7 +229,42 @@ int process_hue_api_set_light_state(uint16_t in_light_id, hue_light_t *in_light,
 	// find the light
     light = hue_find_light_by_id(in_light_id);
     if(light == NULL)
+    {
+        free(in_light);
         return hue_json_build_error(out_responseBuf, in_max_resp_size, HUE_ERROR_ID_003);
+    }
+
+    // save the state
+    if(in_bitmap & (1<<HUE_STATE_BIT_ON))
+    {
+        light->on = in_light->on;
+    }
+
+    if(in_bitmap & (1<<HUE_STATE_BIT_BRI))
+    {
+        light->bri = in_light->bri;
+    }
+
+    if(in_bitmap & (1<<HUE_STATE_BIT_HUE))
+    {
+        light->hue = in_light->hue;
+    }
+
+    if(in_bitmap & (1<<HUE_STATE_BIT_SAT))
+    {
+        light->sat = in_light->hue;
+    }
+
+    if(in_bitmap & (1<<HUE_STATE_BIT_XY))
+    {
+        light->x = in_light->x;
+        light->y = in_light->y;
+    }
+
+    if(in_bitmap & (1<<HUE_STATE_BIT_CT))
+    {
+        light->ct = in_light->ct;
+    }
 
     // issue a command to set light state
     huemail.set_one_light.cmd = HUE_MAIL_CMD_SET_ONE_LIGHT;
@@ -354,8 +428,8 @@ void hue_data_init(hue_t *hue)
     }
 
     /* create one lights for debug */
-    gNumHueLight = 1;
-    gHueLight[0].reachable = 1;
+    //gNumHueLight = 1;
+    //gHueLight[0].reachable = 1;
 
     /* create one user (in whitelist) for debug */
     gNumHueUser = 1;

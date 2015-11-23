@@ -169,6 +169,7 @@ int http_parse_request_line(char *in_buf, uint16_t length, http_parser_t *parser
 	{
 		// req type is OK, get and terminatel url
 		tmpptr = strtoken(&line, ' ');
+        uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "http url -- %s\n", tmpptr);
         http_parse_url(tmpptr, strlen(tmpptr), parser);
 
 		// go to next line
@@ -298,7 +299,7 @@ int http_parse_request(char *in_buf, uint16_t length, http_parser_t *parser)
 		uprintf_default("unknow HTTP request type: %s\n", in_buf);
 	}
 
-    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "HTTP parser result: reqType=%d nURLToken=%d nHeader=%d contentLen=%d\n",
+    uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "HTTP parser result: reqType=%d nURLToken=%d nHeader=%d contentLen=%d\n",
         parser->req_type, parser->num_token, parser->num_request_header, parser->content_len);
 
 	return offset;

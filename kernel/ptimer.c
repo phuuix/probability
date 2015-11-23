@@ -103,6 +103,10 @@ void ptimer_start_remainder(ptimer_table_t *table, ptimer_t *timer, uint32_t tim
 		slot = (table->curslot + timeval) & (table->allslots - 1);
 	}
 	
+    // in case of new slot equals current slot, we have to shift it by one
+    if(slot == table->curslot)
+        slot = (table->curslot + 1) & (table->allslots - 1);
+
 	dllist_append(&table->table[slot], (dllist_node_t *)timer);
 	
 //	ZLOG_DEBUG("start timer remainder: 0x%p timeval=%u, curslot=%u target_slot=%u\n", timer, timeval, table->curslot, slot);
