@@ -63,6 +63,8 @@ netif->flags |= NETIF_FLAG_IGMP;
 
 */
 
+#define UPRINT_BLK_SSDP 7
+
 // send a ssdp packet: multicast or unicast.
 // etharp_output will transfer multicast IP addr to multicast MAC addr
 int ssdp_transmit(uint32_t remote_ip, uint16_t remote_port, uint8_t *data, uint16_t len) 
@@ -92,7 +94,7 @@ uint32_t ssdp_timeout(void *tim, uint32_t param1, uint32_t param2)
 
     if(ip != SSDP_IPADDR)
     {
-        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "SSDP state %d transmit to ip=0x%08x port=%d\n", state, ip, port);
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_SSDP, "SSDP state %d transmit to ip=0x%08x port=%d\n", state, ip, port);
         isMulticase = 0;
     }
 
@@ -168,7 +170,7 @@ uint32_t ssdp_timeout(void *tim, uint32_t param1, uint32_t param2)
     
     if(!isMulticase)
     {
-        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "SSDP Tx: %s\n", outp);
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_SSDP, "SSDP Tx: %s\n", outp);
     }
 
     /* send ssdp alive notify */
@@ -181,7 +183,7 @@ uint32_t ssdp_timeout(void *tim, uint32_t param1, uint32_t param2)
         ptimer_start(&g_zll_timer_table, ptimer, interval);
     }
     else
-        uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "failed to send SSDP alive: %d\n", ret);
+        uprintf(UPRINT_WARNING, UPRINT_BLK_SSDP, "failed to send SSDP alive: %d\n", ret);
 
     return ret;
 }
@@ -204,8 +206,8 @@ void ssdp_recv(void *arg, struct udp_pcb *upcb,
 
     if(strstr(ssdp_discovery, "ssdp:discover"))
     {
-        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "Rx SSDP packet: port=%d size=%d content:\n", port, p->tot_len);
-        uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "%s\n", ssdp_discovery);
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_SSDP, "Rx SSDP packet: port=%d size=%d content:\n", port, p->tot_len);
+        uprintf(UPRINT_DEBUG, UPRINT_BLK_SSDP, "%s\n", ssdp_discovery);
 
         /* send a mail to re-start SSDP state machine */
         huemail.ssdp.cmd = HUE_MAIL_CMD_SSDP;
@@ -256,7 +258,7 @@ int ssdp_init()
         udp_recv(g_ssdp_upcb, &ssdp_recv, (void *)0);
     }
     else
-        uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "igmp_joingroup failed: %d\n", iRet);
+        uprintf(UPRINT_WARNING, UPRINT_BLK_SSDP, "igmp_joingroup failed: %d\n", iRet);
 	//iRet = udp_connect(g_ssdp_upcb,IP_ADDR_ANY, remotePort);
     return iRet; 
 }

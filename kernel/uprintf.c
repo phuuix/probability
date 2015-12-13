@@ -53,6 +53,17 @@ extern int printi(printdev_t *dev, int i, int b, int sg, int width, int pad, int
 extern int prints(printdev_t *dev, const char *string, int width, int pad);
 int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms);
 
+const char *uprintf_level[] = {
+	"E", // emergency
+	"A", // alert
+	"C", // cirtical
+	"E", // error
+	"W", // warning
+	"N", // notice
+	"I", // informational
+	"D", // debug
+};
+
 static void uprintf_task(void *p)
 {
 	int flags;
@@ -144,9 +155,14 @@ uint32_t uprintf_get_flags()
 	return uprintf_logflags;
 }
 
-void uprintf_set_flags(uint32_t flags)
+uint32_t uprintf_set_flags(uint32_t flags)
 {
+	uint32_t old_flags;
+
+	old_flags = uprintf_logflags;
 	uprintf_logflags = flags;
+
+	return old_flags;
 }
 
 int uprintf(uint8_t level, uint8_t block_id, char *fmt,...)
@@ -207,8 +223,7 @@ int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms)
 	
 	if(uprintf_logflags & UPRINTF_LOGLEVEL) // add 5 more bytes
 	{
-		prints(&sprintdev, "LVL", 0, 0);
-		printi(&sprintdev, level, 16, 0, 0, 0, 'a');
+		prints(&sprintdev, uprintf_level[level], 0, 0);
 		prints(&sprintdev, " ", 0, 0);
 	}
 	

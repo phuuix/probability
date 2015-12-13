@@ -181,6 +181,9 @@ int zllctrl_write(int zll_fd, uint8_t *cmd, uint16_t cmd_len)
     int ret = -1;
     uint8_t *tx_buf;
 
+	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "send to soc (%d bytes): %08x %08x %08x %08x %08x\n", 
+			cmd_len, *(uint32_t *)&cmd[0], *(uint32_t *)&cmd[4], 
+			*(uint32_t *)&cmd[8], *(uint32_t *)&cmd[12], *(uint32_t *)&cmd[16]);
     tx_buf = malloc(sizeof(cmd_len));
     if(tx_buf)
     {
@@ -1529,7 +1532,7 @@ static void processRpcSysAppZcl(uint8_t *zclRspBuff)
   uint16_t nwkAddr, clusterID; 
   uint8_t endpoint, appEP, zclFrameLen, zclFrameFrameControl;
     
-  uprintf_default("processRpcSysAppZcl++\n");
+  uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysAppZcl++\n");
     
   //This is a ZCL response
   appEP = *zclRspBuff++;
@@ -1557,7 +1560,7 @@ static void processRpcSysAppZcl(uint8_t *zclRspBuff)
   //is this a foundation command
   if( (zclFrameFrameControl & 0x3) == 0)
   {
-    uprintf_default("processRpcSysAppZcl: Foundation messagex\n");
+    uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysAppZcl: Foundation messagex\n");
     processRpcSysAppZclFoundation(zclRspBuff, zclFrameLen, clusterID, nwkAddr, endpoint);
   }
 }
@@ -1655,16 +1658,16 @@ static void processRpcSysApp(uint8_t *rpcBuff)
   {
     if( rpcBuff[2] == 0)
     {
-      uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "processRpcSysApp: Command Received Successfully\n\n");
+      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysApp: Command Received Successfully, cmd0=0x%02x cmd1=0x%02x\n\n", rpcBuff[1], rpcBuff[2]);
     }
     else
     {
-      uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysApp: Command Error\n\n");
+      uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysApp: Command Error, cmd0=0x%02x cmd1=0x%02x\n\n", rpcBuff[1], rpcBuff[2]);
     }    
   }
   else
   {
-    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysApp: Unsupported MT App Msg\n");
+    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysApp: Unsupported MT App Msg, cmd0=0x%02x cmd1=0x%02x\n", rpcBuff[1], rpcBuff[2]);
   }
     
   return;   

@@ -48,7 +48,7 @@ void uprintf_init();
 int uprintf_enabled(uint8_t level, uint8_t block_id);
 void uprintf_set_enable(uint8_t level, uint8_t block_id, uint8_t enable);
 uint32_t uprintf_get_flags();
-void uprintf_set_flags(uint32_t flags);
+uint32_t uprintf_set_flags(uint32_t flags);
 int uprintf_default(char *fmt,...);
 
 #endif //__UPRINTF_H__

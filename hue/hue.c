@@ -420,7 +420,7 @@ void hue_data_init(hue_t *hue)
     	gHueLight[i].colormode = HUE_LIGHT_COLORMODE_HS;
     	gHueLight[i].reachable = 0;
     	gHueLight[i].type = 0;
-        siprintf((char *)gHueLight[i].name, 32, "HueLamp%d", i+1);
+        siprintf((char *)gHueLight[i].name, 32, "HueLamp%d", i);
     	strcpy((char *)gHueLight[i].modelId, "LCT001");
     	strcpy((char *)gHueLight[i].swversion, "01150905");
         gHueLight[i].ep_info.nwkAddr = 0x02+i;
@@ -428,8 +428,10 @@ void hue_data_init(hue_t *hue)
     }
 
     /* create one lights for debug */
-    //gNumHueLight = 1;
-    //gHueLight[0].reachable = 1;
+    gNumHueLight = 1;
+    gHueLight[0].reachable = 1;
+	siprintf((char *)gHueLight[0].name, 32, "DummyLamp");
+	gHueLight[i].ep_info.nwkAddr = 0xEE;
 
     /* create one user (in whitelist) for debug */
     gNumHueUser = 1;

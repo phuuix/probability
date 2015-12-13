@@ -548,7 +548,13 @@ uint32_t zllctrl_process_json_message(hue_t *hue, hue_mail_t *huemail)
     return ret;
 }
 
-
+/* GPIO init for LEDs 
+ * PE0: LED_ETH
+ * PE1: KEY_IN
+ * PE2: LED_PORTAL
+ * PE3: LED_ZIGBEE
+ * PE4: LED_POWER
+ */
 static void zllctrl_gpio_init()
 {
     GPIO_InitTypeDef GPIO_InitStructure;
@@ -563,7 +569,7 @@ static void zllctrl_gpio_init()
 	GPIO_Init(GPIOE, &GPIO_InitStructure);
 
     GPIO_SetBits(GPIOE, GPIO_Pin_4); // power led
-    GPIO_SetBits(GPIOE, GPIO_Pin_2); // zigbee status led
+    GPIO_SetBits(GPIOE, GPIO_Pin_0); // ethernet Led
 
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
@@ -573,6 +579,30 @@ static void zllctrl_gpio_init()
 	GPIO_Init(GPIOE, &GPIO_InitStructure);
 }
 
+static ptimer_t zllctrl_timer[5];
+
+static uint32_t led_off(void *tim, uint32_t param0, uint32_t param1)
+{
+	uint32_t led = ((ptimer_t *)tim)->param[0];
+	GPIO_ResetBits(GPIOE, 1<<led);
+	return 0;
+}
+
+// led is GPIO pin
+static void zllctrl_blink_led(uint16_t led, uint32_t duration)
+{
+	ptimer_t *timer;
+
+	timer = &zllctrl_timer[led&0x1F];
+	timer->onexpired_func = led_off;
+	timer->param[0] = led;
+	// set led on
+	GPIO_SetBits(GPIOE, 1<<led);
+	if(ptimer_is_running(timer))
+		ptimer_cancel(&g_zll_timer_table, timer);
+	ptimer_start(&g_zll_timer_table, timer, duration);
+}
+
 static uint32_t button_monitor(void *tim, uint32_t param0, uint32_t param1)
 {
     uint8_t status;
@@ -580,9 +610,10 @@ static uint32_t button_monitor(void *tim, uint32_t param0, uint32_t param1)
     ptimer_t *timer = (ptimer_t *)tim;
 
     status = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
-    if((status == Bit_RESET) && (now - param0 > 300))
+    if((status == Bit_RESET) && (now - param0 > 100))
     {
-        // button active and 3s after last touchlink
+        // button active and 1s after last touchlink
+        zllctrl_blink_led(2, 50); // set portal led
         uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "touchlink ...\n");
         zllSocTouchLink(NULL);
         timer->param[0] = now;
@@ -598,16 +629,16 @@ static uint32_t zllctrl_mainloop(hue_t *hue)
     zll_mail_t zllmail;
     int ret;
     uint32_t t1, t2;
-    ptimer_t buttontimer;
+    ptimer_t *buttontimer = &zllctrl_timer[1];
 
     /* init GPIO: PE0/2/3/4 is LED and PE1 is touchlink button */
     zllctrl_gpio_init();
 
     /* start a timer to monitor button event (via gpio) every 0.5s */
-    buttontimer.flags = PTIMER_FLAG_PERIODIC;
-    buttontimer.onexpired_func = button_monitor;
-    buttontimer.param[0] = 0; // param[0] represent the last time of touchlink
-    ptimer_start(&g_zll_timer_table, &buttontimer, 10);
+    buttontimer->flags = PTIMER_FLAG_PERIODIC;
+    buttontimer->onexpired_func = button_monitor;
+    buttontimer->param[0] = 0; // param[0] represent the last time of touchlink
+    ptimer_start(&g_zll_timer_table, buttontimer, 10);
 
     t1 = tick();
     /* after network is established, begin event loop */
@@ -648,6 +679,7 @@ static uint32_t zllctrl_mainloop(hue_t *hue)
         if(ret == ROK)
         {
             /* process messages from zigbee device */
+			zllctrl_blink_led(3, 50); // zigbee status led
             zllctrl_process_soc_message(hue, zllmail.data, zllmail.length);
         }
     }
@@ -873,6 +905,7 @@ uint32_t zllctrl_connect_to_soc(hue_t *hue)
         return ret;
     }
 
+#if 0
 	/* get device info */
 	zllSocUtilGetDevInfo(NULL);
     ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, zllsoc_is_devinfo_processed);
@@ -881,7 +914,7 @@ uint32_t zllctrl_connect_to_soc(hue_t *hue)
         uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "can't get device info\n");
         return ret;
     }
-
+#endif
     return ret;
 }
 
