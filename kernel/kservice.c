@@ -74,6 +74,9 @@ static void kserv_task(void *p)
 	dllist_node_t ktime_slots[KSERV_TIMESLOT_NUM];
     ptimer_t ktime_timer[KSERV_TIMER_NUM];
 	ptimer_t * timer;
+
+	/* init mbox first */
+	assert(ROK == mbox_initialize(&kmbox, sizeof(kserv_mail_t)/sizeof(uint32_t), KSERV_MAIL_NUM, NULL));
 	
 	ptimer_init_nomalloc(&ktime_table, KSERV_TIMESLOT_NUM, ktime_slots);
 
@@ -134,9 +137,6 @@ int kserv_request(int type, int data)
 void kservice_init()
 {
 	task_t tt;
-
-	/* init mbox first */
-	assert(ROK == mbox_initialize(&kmbox, sizeof(kserv_mail_t)/sizeof(uint32_t), KSERV_MAIL_NUM, NULL));
 	
 	/* start kservice task */
 	tt = task_create("tkserv", kserv_task, NULL, NULL, TKSERV_STACK_SIZE, TKSERV_PRIORITY, 0, 0);

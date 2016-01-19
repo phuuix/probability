@@ -172,16 +172,18 @@ void ptimer_consume_time(ptimer_table_t *table, uint32_t time)
 				ptimer_start_remainder(table, timer, timer->remainder);
 				continue;
 			}
-			
-			/* mark timer as not running */
-			timer->flags &= ~PTIMER_FLAG_RUNNING;
-			
+						
 			/* call onexpired_func */
 //			ZLOG_DEBUG("timer expired: 0x%p at slot %u\n", timer, table->curslot);
 			if(timer->onexpired_func)
 			{
 				ret = timer->onexpired_func(timer, timer->param[0], timer->param[1]);
 			}
+
+			/* be careful: PTIMER_FLAG_RUNNING flag race here !!! */
+			
+			/* mark timer as not running */
+			timer->flags &= ~PTIMER_FLAG_RUNNING;
 			
 			/* if periodic timer */
 			if((timer->flags & PTIMER_FLAG_PERIODIC) && (ret == 0))

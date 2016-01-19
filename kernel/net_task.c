@@ -46,6 +46,8 @@ static void net_task(void *p)
 {
 	struct net_msg msg;
 
+	mbox_initialize(&net_mbox, sizeof(struct net_msg)/sizeof(int), TNET_MBOX_SIZE, net_mbox_data);
+	
 	while(1)
 	{
 		int ret;
@@ -69,8 +71,6 @@ static void net_task(void *p)
 void net_task_init()
 {
 	task_t t;
-
-	mbox_initialize(&net_mbox, sizeof(struct net_msg)/sizeof(int), TNET_MBOX_SIZE, net_mbox_data);
 	
 	t = task_create("tnet", net_task, NULL, net_task_stack, TNET_STACK_SIZE, TNET_PRIORITY, 20, 0);
 	assert(t != RERROR);

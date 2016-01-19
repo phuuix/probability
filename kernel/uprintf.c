@@ -229,7 +229,7 @@ int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms)
 	
 	if(uprintf_logflags & UPRINTF_LOGBLOCK) // add 6 more bytes
 	{
-		prints(&sprintdev, "BLK", 0, 0);
+		prints(&sprintdev, "B", 0, 0);
 		printi(&sprintdev, block_id, 16, 0, 2 /* width */, 2 /* PAD_ZERO */, 'a');
 		prints(&sprintdev, " ", 0, 0);
 	}

@@ -10,8 +10,8 @@
 #define ZLL_MBOX_SIZE 16
 
 
-/* timeout before response is back: 500ms */
-#define ZLL_RESP_DEFAULT_TIMEOUT 50
+/* timeout before response is back: 550ms */
+#define ZLL_RESP_DEFAULT_TIMEOUT 55
 
 hue_t *zllctrl_get_hue();
 

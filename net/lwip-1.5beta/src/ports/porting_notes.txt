@@ -1,0 +1,49 @@
+
+
+eth中断处理: post sem, invoke task ethernetif_input, low_level_input, netif->input()
+
+
+define NO_SYS as 0, and all timer is handled in tcpip_thread. ==> really good:)
+but the func sys_timeout() isn't protected by any lock, this could cause issue...
+
+2015.12.26: puhuix, port LWIP v1.5 beta
+
+1. netif的几个成员函数
+input(): 由netif_add()传入。如设置为tcpip_input(), 发消息给tcpip_thread。
+output(): etharp_output()
+linkoutput(): low_level_output()
+status_callback(): can be NULL
+link_callback(): can be NULL，设置为ethernetif_update_config
+
+2. LWIP中的threads
+	tcpip_thread -- main task
+	ethernetif_input -- rx from hardware interrupt
+	ethernetif_set_link -- 用于管理Link status变更
+	LwIP_DHCP_task -- only live at beginning, not used in Probability
+	
+3. 初始化流程
+lwip_sys_init()
+	tcpip_init()
+		lwip_init()  -- lwip初始化
+		启动LWIP主线程tcpip_thread
+	启动dhcp(timer方式)
+	netif_add() -- 添加eth if，将eth if的input函数设置为tcpip_input()
+		ethernetif_init()
+			将eth if的output()设置为etharp_output()
+			将eth if的linkoutput()设置为low_level_output()
+			low_level_init()
+				HAL_ETH_Init() --初始化硬件PHY及MAC
+				设置为MAC地址
+				创建ethernetif_input线程
+				HAL_ETH_Start() -- 启动ethernet
+	netif_set_up() -- 将eth if设置为up flag
+	创建ethernetif_set_link线程
+	
+4. Rx流程
+Eth Rx中断 -- 唤醒ethernetif_input线程
+	ethernetif_input() 
+		low_level_input()
+		调用eth if的input函数(tcpip_init())
+			tcpip_thread处理
+5. Tx流程
+

@@ -17,8 +17,8 @@
 #include "zll_controller.h"
 #include "zllSocCmd.h"
 #include "zcl_ll.h"
-#include "stm32f2xx_gpio.h"
-#include "stm32f2xx_rcc.h"
+#include "stm32f2xx.h"
+#include "stm32f2xx_hal.h"
 
 mbox_t g_hue_mbox;  // Rx message from HTTP or console
 mbox_t g_zll_mbox;  // Rx message from ZLL
@@ -38,7 +38,7 @@ void zllctrl_process_console_command( char *cmdBuff );
 void getConsoleCommandParams(char* cmdBuff, uint16_t *nwkAddr, uint8_t *addrMode, uint8_t *ep, uint16_t *value, uint16_t *transitionTime);
 uint32_t getParam( char *cmdBuff, char *paramId, uint32_t *paramInt);
 
-extern void ssdp_statemachine_init(uint32_t destIp, uint32_t destPort, uint16_t interval);
+extern void ssdp_start_statemachine_unicast(uint32_t destIp, uint32_t destPort, uint16_t interval);
 extern int ssdp_init();
 
 static uint16_t savedNwkAddr;    
@@ -559,32 +559,33 @@ static void zllctrl_gpio_init()
 {
     GPIO_InitTypeDef GPIO_InitStructure;
 
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
+	__HAL_RCC_GPIOE_CLK_ENABLE();
 	
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
-	GPIO_Init(GPIOE, &GPIO_InitStructure);
+	GPIO_InitStructure.Pin = GPIO_PIN_0 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4;
+	GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
+	GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStructure.Pull = GPIO_NOPULL;
+	GPIO_InitStructure.Alternate = 0;
+	
+	HAL_GPIO_Init(GPIOE, &GPIO_InitStructure);
 
-    GPIO_SetBits(GPIOE, GPIO_Pin_4); // power led
-    GPIO_SetBits(GPIOE, GPIO_Pin_0); // ethernet Led
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_4, GPIO_PIN_SET);  // power led
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_SET); // ethernet Led
 
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
-	GPIO_Init(GPIOE, &GPIO_InitStructure);
+	GPIO_InitStructure.Pin = GPIO_PIN_1;
+	GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
+	GPIO_InitStructure.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStructure.Pull = GPIO_PULLUP;
+	GPIO_InitStructure.Alternate = 0;
+	HAL_GPIO_Init(GPIOE, &GPIO_InitStructure);
 }
 
 static ptimer_t zllctrl_timer[5];
 
 static uint32_t led_off(void *tim, uint32_t param0, uint32_t param1)
 {
-	uint32_t led = ((ptimer_t *)tim)->param[0];
-	GPIO_ResetBits(GPIOE, 1<<led);
+	uint32_t led_pin = ((ptimer_t *)tim)->param[0];
+	HAL_GPIO_WritePin(GPIOE, 1<<led_pin, GPIO_PIN_RESET);
 	return 0;
 }
 
@@ -595,9 +596,9 @@ static void zllctrl_blink_led(uint16_t led, uint32_t duration)
 
 	timer = &zllctrl_timer[led&0x1F];
 	timer->onexpired_func = led_off;
-	timer->param[0] = led;
+	timer->param[0] = led;  // pin of LED
 	// set led on
-	GPIO_SetBits(GPIOE, 1<<led);
+	HAL_GPIO_WritePin(GPIOE, 1<<led, GPIO_PIN_SET);
 	if(ptimer_is_running(timer))
 		ptimer_cancel(&g_zll_timer_table, timer);
 	ptimer_start(&g_zll_timer_table, timer, duration);
@@ -609,8 +610,8 @@ static uint32_t button_monitor(void *tim, uint32_t param0, uint32_t param1)
     uint32_t now = tick();
     ptimer_t *timer = (ptimer_t *)tim;
 
-    status = GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_1);
-    if((status == Bit_RESET) && (now - param0 > 100))
+	status = HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_1);
+    if((status == GPIO_PIN_RESET) && (now - param0 > 100))
     {
         // button active and 1s after last touchlink
         zllctrl_blink_led(2, 50); // set portal led
@@ -665,7 +666,7 @@ static uint32_t zllctrl_mainloop(hue_t *hue)
             else if(huemail.common.cmd == HUE_MAIL_CMD_SSDP)
             {
                 /* process SSDP discovery request: send back SSDP alive message */
-                ssdp_statemachine_init(huemail.ssdp.ipaddr, huemail.ssdp.port, huemail.ssdp.interval);
+                ssdp_start_statemachine_unicast(huemail.ssdp.ipaddr, huemail.ssdp.port, huemail.ssdp.interval);
             }
             else
             {
@@ -954,11 +955,23 @@ static void zllctrl_task(void *p)
 	hue_t *hue;
 	uint32_t ret;
 
-	uprintf_set_enable(UPRINT_INFO, UPRINT_BLK_HUE, 1);
-	//uprintf_set_enable(UPRINT_DEBUG, UPRINT_BLK_HUE, 1);
+	//set some default values for console
+	savedNwkAddr = 0x0002;
+	savedAddrMode = 0x02;	 
+	savedEp = 0x0b;    
+	savedValue = 0x0;	 
+	savedTransitionTime = 0x1;
+
+	mbox_initialize(&g_hue_mbox, sizeof(hue_mail_t)/sizeof(int), HUE_MBOX_SIZE, hue_mbox_data);
+	IPC_SET_OWNER(&g_hue_mbox, TASK_T(current)|0x20);
+    mbox_initialize(&g_zll_mbox, sizeof(zll_mail_t)/sizeof(int), ZLL_MBOX_SIZE, zll_mbox_data);
+	IPC_SET_OWNER(&g_zll_mbox, TASK_T(current)|0x40);
+	
+	//uprintf_set_enable(UPRINT_INFO, UPRINT_BLK_HUE, 1);
 
 	// delay 3s to wait other is up
 	task_delay(3*100);
+	uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "zllctrl_task is active\n");
 	
 	hue = (hue_t *)p;
     hue_data_init(hue);
@@ -998,16 +1011,6 @@ int zllctrl_init()
 {
 	/* create a zllhue task */
 	task_t t;
-
-	//set some default values for console
-	savedNwkAddr = 0x0002;
-	savedAddrMode = 0x02;	 
-	savedEp = 0x0b;    
-	savedValue = 0x0;	 
-	savedTransitionTime = 0x1;
-
-	mbox_initialize(&g_hue_mbox, sizeof(hue_mail_t)/sizeof(int), HUE_MBOX_SIZE, hue_mbox_data);
-    mbox_initialize(&g_zll_mbox, sizeof(zll_mail_t)/sizeof(int), ZLL_MBOX_SIZE, zll_mbox_data);
 
 	t = task_create("tzll", zllctrl_task, &g_hue, zll_task_stack, TZLL_STACK_SIZE, TZLL_PRIORITY, 20, 0);
 	assert(t != RERROR);

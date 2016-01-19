@@ -46,17 +46,20 @@ int sem_initialize(sem_t *sem, int value)
 
 		f = bsp_fsave();
 
+		sem->t_parent = TASK_T(current);
+		sem->type = IPC_TYPE_SEMAPHORE;
+		sem->value = value;
+		blockq_init(&sem->taskq);
+		sem->flag = IPC_FLAG_VALID;
+
 #ifdef INCLUDE_JOURNAL
-		journal_ipc_init((ipc_t *)sem);
+		journal_sem_init(sem);
 #endif
 					
 #ifdef INCLUDE_PMCOUNTER
 		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nSemaphore], 1);
 #endif
 
-		sem->value = value;
-		blockq_init(&sem->taskq);
-		sem->flag = IPC_FLAG_VALID;
 		bsp_frestore(f);
 
 		return ROK;
@@ -80,7 +83,7 @@ void sem_destroy(sem_t *sem)
 		f = bsp_fsave();
 
 #ifdef INCLUDE_JOURNAL
-		journal_ipc_destroy((ipc_t *)sem);
+		journal_sem_destroy(sem);
 #endif
 						
 #ifdef INCLUDE_PMCOUNTER
@@ -115,6 +118,9 @@ int sem_pend(sem_t *s, int timeout)
 	if(s && (s->flag & IPC_FLAG_VALID))
 	{
 		f = bsp_fsave();
+#ifdef INCLUDE_JOURNAL
+		journal_sem_pend(s, timeout);
+#endif
 		s->value--;
 		if(s->value < 0)
 		{
@@ -136,9 +142,8 @@ int sem_pend(sem_t *s, int timeout)
 					current->flags |= TASK_FLAGS_DELAYING;
 				}
 				task_block(&(s->taskq));
-				bsp_frestore(f);
+				bsp_frestore(f);  // must restore flag here to let task switch occure
 
-				r = RERROR;
 				f = bsp_fsave();
 				switch ((r = current->wakeup_cause))
 				{
@@ -174,7 +179,7 @@ int sem_post(sem_t *s)
 {
 	uint32_t f;
 	int r = RERROR;
-	struct dtask *t;
+	struct dtask *t = NULL;
 
 	if(s && (s->flag & IPC_FLAG_VALID))
 	{
@@ -185,12 +190,18 @@ int sem_post(sem_t *s)
 		{
 			/* wakeup task */
 			t = blockq_select(&(s->taskq));
-			if(t)
-			{
-				t->wakeup_cause= ROK;
-				task_wakeup(TASK_T(t));
-			}
 		}
+
+#ifdef INCLUDE_JOURNAL
+		journal_sem_post(s, t);
+#endif // INCLUDE_JOURNAL
+
+		if(t)
+		{
+			t->wakeup_cause= ROK;
+			task_wakeup(TASK_T(t));
+		}
+		
 		bsp_frestore(f);
 	}
 	return r;

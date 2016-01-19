@@ -1,5 +1,5 @@
 
-SUBDIRS = lwip-1.4.1/src
+SUBDIRS = lwip-1.5beta/src
 
 all:
 	for tdir in $(SUBDIRS) ; do make -C $$tdir all ; done

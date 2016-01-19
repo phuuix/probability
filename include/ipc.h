@@ -31,17 +31,21 @@
 #define IPC_FLAG_VALID			0x01			/* IPC is valid */
 #define IPC_FLAG_FREEMEM        0x02            /* memory need to be freed upon destroy */
 
+#define IPC_SET_OWNER(ipc, owner_id) ((struct ipc_common *)(ipc))->t_parent = (owner_id)
+
 struct ipc_common
 {
-	uint16_t type;					/* type */
-	uint16_t flag;					/* flag */
+	uint8_t type;					/* type */
+	uint8_t flag;					/* flag */
+	uint16_t t_parent;              /* who create the ipc */
 	blockq_t taskq;
 };
 
 struct mailbox
 {
-	uint16_t type;					/* type */
-	uint16_t flag;					/* flag */
+	uint8_t type;					/* type */
+	uint8_t flag;					/* flag */
+	uint16_t t_parent;              /* who create the ipc */
 	blockq_t taskq;					/* sleep task queue */
 
 	struct queue_buffer buf;		/* mail buffer */
@@ -49,8 +53,9 @@ struct mailbox
 
 struct messageq
 {
-	uint16_t type;					/* type */
-	uint16_t flag;					/* flag */
+	uint8_t type;					/* type */
+	uint8_t flag;					/* flag */
+	uint16_t t_parent;              /* who create the ipc */
 	blockq_t taskq;					/* sleep task queue */
 
 	struct mem_buffer buf;			/* message buffer */
@@ -58,8 +63,9 @@ struct messageq
 
 struct semaphore
 {
-	uint16_t type;					/* type */
-	uint16_t flag;					/* flag */
+	uint8_t type;					/* type */
+	uint8_t flag;					/* flag */
+	uint16_t t_parent;              /* who create the ipc */
 	blockq_t taskq;					/* sleep task queue */
 
 	int value;						/* semaphore's value */
@@ -68,8 +74,9 @@ struct semaphore
 
 struct mutex
 {
-	uint16_t type;					/* type */
-	uint16_t flag;					/* flag */
+	uint8_t type;					/* type */
+	uint8_t flag;					/* flag */
+	uint16_t t_parent;              /* who create the ipc */
 	blockq_t taskq;					/* sleep task queue */
 
 	int value;						/* mutex's value */

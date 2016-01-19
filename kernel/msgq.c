@@ -55,13 +55,14 @@ int msgq_initialize(msgq_t *q, uint16_t bufsize, void *buf)
 		return RERROR;
 
 	f = bsp_fsave();
+	q->t_parent = TASK_T(current);
 	q->type = IPC_TYPE_MSGQ;
 	q->flag = IPC_FLAG_VALID;
 	blockq_init(&q->taskq);
 	mem_buffer_init(&q->buf, buf, bufsize);
 
 #ifdef INCLUDE_JOURNAL
-	journal_ipc_init((ipc_t *)q);
+	journal_msgq_init(q, bufsize);
 #endif
 			
 #ifdef INCLUDE_PMCOUNTER
@@ -88,7 +89,7 @@ void msgq_destroy(msgq_t *q)
 		f = bsp_fsave();
 
 #ifdef INCLUDE_JOURNAL
-		journal_ipc_destroy((ipc_t *)q);
+		journal_msgq_destroy(q);
 #endif
 				
 #ifdef INCLUDE_PMCOUNTER

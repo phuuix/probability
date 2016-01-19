@@ -8,7 +8,7 @@ S_OBJS = $(notdir $(S_FILES:.s=.o))
 #C_FILES = $(wildcard *.c)
 C_FILES = buffer.c clock.c idletask.c ipc.c list.c \
 	mbox.c memory.c msgq.c mutex.c ptimer.c s_alloc.c \
-	sem.c task.c taskq.c siprintf.c journal.c kprintf.c uprintf.c kservice.c net_task.c
+	sem.c task.c taskq.c siprintf.c journal.c kprintf.c uprintf.c kservice.c net_task.c cmsis_os.c
 C_OBJS = $(notdir $(C_FILES:.c=.o))
 
 OBJS = $(S_OBJS) $(C_OBJS)

@@ -5,7 +5,7 @@
 # BSP: Must define this environment variable in SHELL.
 
 ifeq ($(BSP),)
-BSP = stm32f2xx_skm32
+BSP = stm32f2xxskm32
 endif
 
 # Defination for ep7312 bsp
@@ -44,8 +44,8 @@ CROSS_COMPILE = arm-none-eabi-
 endif
 
 # Defination for STM32F2xx SK-M32 bsp
-ifeq ($(BSP), stm32f2xx_skm32)
-BOARD = stm32f2xx_skm32
+ifeq ($(BSP), stm32f2xxskm32)
+BOARD = stm32f2xxskm32
 ARCH = ARM
 CROSS_COMPILE = arm-none-eabi-
 endif

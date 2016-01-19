@@ -13,7 +13,8 @@ C_OBJS = $(notdir $(C_FILES:.c=.o))
 
 OBJS = $(S_OBJS) $(C_OBJS)
 TARGET_LIB = $(LIB_PATH)/libhue.a
-CFLAGS += -I../net/lwip-1.4.1/src/include -I../net/lwip-1.4.1/src/include/ipv4 -I../net/lwip-1.4.1/src/ports/include
+CFLAGS += -I../net/lwip-1.5beta/src/include -I../net/lwip-1.5beta/src/include/ipv4 -I../net/lwip-1.5beta/src/ports/include \
+	-I../stm32f2/Include -I../stm32f2/CMSIS/Include -I../stm32f2/STM32F2xx_HAL_Driver/Inc
 
 all: $(TARGET_LIB)
 .PHONY: all

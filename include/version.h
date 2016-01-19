@@ -22,7 +22,7 @@
 #include <config.h>
 #include <shell.h>
 
-#define DOOLOO_VERSION "0.40"
+#define OS_VERSION "0.40"
 
 #endif /* __D_VERSION_H__ */
 

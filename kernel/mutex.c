@@ -43,7 +43,8 @@ int mtx_initialize(mtx_t *mtx)
 		uint32_t f;
 
 		f = bsp_fsave();
-		
+
+		mtx->t_parent = TASK_T(current);
 		mtx->value = 1;
 		mtx->holdtimes = 0;
 		mtx->owner = NULL;
@@ -51,7 +52,7 @@ int mtx_initialize(mtx_t *mtx)
 		mtx->flag = IPC_FLAG_VALID;
 
 #ifdef INCLUDE_JOURNAL
-		journal_ipc_init((ipc_t *)mtx);
+		journal_mtx_init(mtx);
 #endif
 		
 #ifdef INCLUDE_PMCOUNTER
@@ -81,7 +82,7 @@ void mtx_destroy(mtx_t *mtx)
 		f = bsp_fsave();
 
 #ifdef INCLUDE_JOURNAL
-		journal_ipc_destroy((ipc_t *)mtx);
+		journal_mtx_destroy(mtx);
 #endif
 				
 #ifdef INCLUDE_PMCOUNTER

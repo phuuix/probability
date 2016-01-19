@@ -23,7 +23,7 @@
 
 int show_version(struct shell_session *ss, int argc, char **argv)
 {
-	ss->output("  Dooloo Embedded Operating System version %s\n", DOOLOO_VERSION);
+	ss->output("  Dooloo Embedded Operating System version %s\n", OS_VERSION);
 	ss->output("  Copyright: Puhui Xiong -- bearix@hotmail.com\n");
 
 	return SHELL_RET_OK;

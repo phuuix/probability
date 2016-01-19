@@ -61,6 +61,7 @@ int mbox_initialize(mbox_t *mbox, uint16_t usize, uint16_t unum, void *data)
 	if(data == NULL)
 		return RERROR;
 
+	mbox->t_parent = TASK_T(current);
 	mbox->type = IPC_TYPE_MBOX;
 	blockq_init(&mbox->taskq);
 	queue_buffer_init(&mbox->buf, data, usize, unum);
@@ -69,7 +70,7 @@ int mbox_initialize(mbox_t *mbox, uint16_t usize, uint16_t unum, void *data)
 	mbox->flag |= IPC_FLAG_VALID;
 	
 #ifdef INCLUDE_JOURNAL
-	journal_ipc_init((ipc_t *)mbox);
+	journal_mbox_init(mbox, usize, unum);
 #endif
 
 #ifdef INCLUDE_PMCOUNTER
@@ -98,7 +99,7 @@ void mbox_destroy(mbox_t *mbox)
 			free(mbox->buf.data);
 		
 #ifdef INCLUDE_JOURNAL
-		journal_ipc_destroy((ipc_t *)mbox);
+		journal_mbox_destroy(mbox);
 #endif
 		
 #ifdef INCLUDE_PMCOUNTER
@@ -142,10 +143,16 @@ int mbox_post(mbox_t *mbox, uint32_t *msg)
 			if(t)
 			{
 #ifdef INCLUDE_JOURNAL
-				journal_ipc_post((ipc_t *)mbox, TASK_T(t));
+				journal_mbox_post(mbox, t);
 #endif // INCLUDE_JOURNAL
 				t->wakeup_cause = ROK;
 				task_wakeup(t-systask);
+			}
+			else
+			{
+#ifdef INCLUDE_JOURNAL
+				journal_mbox_post(mbox, t);
+#endif // INCLUDE_JOURNAL
 			}
 		}
 		bsp_frestore(f);
@@ -193,7 +200,7 @@ int mbox_pend(mbox_t *mbox, uint32_t *msg, int timeout)
 				}
 
 #ifdef INCLUDE_JOURNAL
-				journal_ipc_pend((ipc_t *)mbox, TASK_T(current));
+				journal_mbox_pend(mbox, timeout);
 #endif // INCLUDE_JOURNAL
 				task_block(&(mbox->taskq));
 				bsp_frestore(f);

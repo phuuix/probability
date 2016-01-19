@@ -55,7 +55,7 @@
 	((struct dtask *)((unsigned char *)d-sizeof(struct dtask)+sizeof(struct dtask_delay)))
 
 /* get task_t from a task pointer */
-#define TASK_T(t) t-systask
+#define TASK_T(t) (t-systask)
 
 typedef int task_t;
 

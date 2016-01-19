@@ -5,7 +5,7 @@ PROJ_ROOTDIR = .
 
 include $(PROJ_ROOTDIR)/config.mk
 
-SUBDIRS = libc kernel tty net hue bsp/$(BSP)
+SUBDIRS = libc kernel tty net hue stm32f2 bsp/$(BSP)
 
 all:
 	for tdir in $(SUBDIRS) ; do make -C $$tdir all ; done

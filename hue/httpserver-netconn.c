@@ -111,6 +111,23 @@ uint32_t http_build_uuid(char *outstr, uint32_t size)
     return offset;
 }
 
+/* build hue bridge ID in form of mac0:mac1:mac2:fffe:mac3:mac4:mac5 */
+uint32_t http_build_bridgeid(char *outstr, int32_t size)
+{
+	uint32_t offset = 0;
+	uint8_t *mac;
+
+	*outstr = '\0';
+	if(netif_default)
+	{
+		mac = netif_default->hwaddr;
+		offset += siprintf(outstr, size, "%02x%02x%02xFFFE%02x%02x%02x", 
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	}
+
+	return offset;
+}
+
 static void http_serv_send_err_page(struct netconn *conn)
 {
     /* Send the HTML header */
