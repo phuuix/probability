@@ -69,7 +69,7 @@ void journal_task_switch(struct dtask *from, struct dtask *to)
 	struct journal_taskswitch *jevent = (struct journal_taskswitch *)JOURNAL_CLASS1_NEXTRECORD;
 	
     bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);       // from must be current!
 	jevent->jtype = JOURNAL_TYPE_TASKSWITCH;
 	
@@ -89,7 +89,7 @@ void journal_mbox_pend(mbox_t *mbox, int timeout)
 	struct journal_mboxpend *jevent = (struct journal_mboxpend *)JOURNAL_CLASS1_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_MBOXPEND;
 
@@ -107,7 +107,7 @@ void journal_mbox_post(mbox_t *mbox, dtask_t *task)
 	struct journal_mboxpost *jevent = (struct journal_mboxpost *)JOURNAL_CLASS1_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_MBOXPOST;
 
@@ -126,7 +126,7 @@ void journal_sem_pend(sem_t *sem, int timeout)
 	struct journal_sempend *jevent = (struct journal_sempend *)JOURNAL_CLASS1_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_SEMPEND;
 
@@ -144,7 +144,7 @@ void journal_sem_post(sem_t *sem, dtask_t *task)
 	struct journal_sempost *jevent = (struct journal_sempost *)JOURNAL_CLASS1_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_SEMPOST;
 	
@@ -165,7 +165,7 @@ void journal_timestamp()
 	struct journal_time *jevent = (struct journal_time *)JOURNAL_CLASS1_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_TIMESTAMP;
 	
@@ -182,7 +182,7 @@ void journal_user_defined(uint32_t event_type, uint32_t data)
 
 	flags = bsp_fsave();
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = event_type;
 
@@ -202,7 +202,7 @@ void journal_task_create(struct dtask *task)
 	struct journal_taskcreate *jevent = (struct journal_taskcreate *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_TASKCREATE;
 
@@ -222,7 +222,7 @@ void journal_task_exit(struct dtask *task)
 	struct journal_taskexit *jevent = (struct journal_taskexit *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_TASKEXIT;
 
@@ -241,7 +241,7 @@ void journal_mbox_init(mbox_t *mbox, uint16_t usize, uint16_t unum)
 	struct journal_mboxinit *jevent = (struct journal_mboxinit *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_MBOXINIT;
 
@@ -257,7 +257,7 @@ void journal_mbox_destroy(mbox_t *mbox)
 	struct journal_mboxdestroy *jevent = (struct journal_mboxdestroy *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_MBOXDESTROY;
 
@@ -275,7 +275,7 @@ void journal_sem_init(sem_t *sem)
 	struct journal_seminit *jevent = (struct journal_seminit *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_SEMINIT;
 
@@ -290,7 +290,7 @@ void journal_sem_destroy(sem_t *sem)
 	struct journal_semdestroy *jevent = (struct journal_semdestroy *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_SEMDESTROY;
 
@@ -307,7 +307,7 @@ void journal_mtx_init(mtx_t *mtx)
 	struct journal_mtxinit *jevent = (struct journal_mtxinit *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_MTXINIT;
 
@@ -323,7 +323,7 @@ void journal_mtx_destroy(mtx_t *mtx)
 	struct journal_mtxdestroy *jevent = (struct journal_mtxdestroy *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_MTXDESTROY;
 
@@ -340,7 +340,7 @@ void journal_msgq_init(msgq_t *msgq, uint16_t size)
 	struct journal_msgqinit *jevent = (struct journal_msgqinit *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_MSGQINIT;
 
@@ -356,7 +356,7 @@ void journal_msgq_destroy(msgq_t *msgq)
 	struct journal_msgqdestroy *jevent = (struct journal_msgqdestroy *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec/1000;
+	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
 	jevent->jtype = JOURNAL_TYPE_MSGQDESTROY;
 
@@ -404,16 +404,17 @@ void pmc_calc_cpu_usage()
 	uint32_t time_sec, time_ns, t;
 	dtask_t *task;
 
-	/* for current task, simulate on swith out and in */
+	/* for current task, simulate a task switch out and in */
 	bsp_gettime(&time_sec, &time_ns);
-	current->time_accumulate_c_ns += 1000000000 - current->time_in_ns;
+	current->time_accumulate_c_ns += 1000000 /* now is us NOT ns */ - current->time_in_ns;
 	current->time_in_sec = time_sec;
 	current->time_in_ns = time_ns;
 
 	/*kprintf("time_sec=%d time_ns=%d, sys_time_calibration=%d current=%s time_in_ns=%d time_accumulate_c_ns=%d\n", 
 		time_sec, time_ns, sys_time_calibration, 
 		current->name, current->time_in_ns, current->time_accumulate_c_ns);*/
-	
+
+	/* populate the CPU usage value (as us) for every active task */
 	for(t=1; t<MAX_TASK_NUMBER; t++)
 	{
 		task = &systask[t];

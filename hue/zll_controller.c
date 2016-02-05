@@ -387,7 +387,6 @@ uint8_t zllctrl_process_newdev_indication(epInfo_t *epInfo)
 }
 
 #define CC2530_PROGRAMMING_INTERVAL 100 // prevent programming cc2530 too fast, in us
-extern void udelay(uint32_t us);
 uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
 {
     uint32_t ret = 0;
@@ -432,14 +431,14 @@ uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
     {
         zllSocSetState(cmdbuf, newlight->on, dstAddr, endpoint, addrMode);
         light->on = newlight->on;
-		udelay(CC2530_PROGRAMMING_INTERVAL);  
+		bsp_udelay(CC2530_PROGRAMMING_INTERVAL);  
     }
 
     if(bitmap & (1<<HUE_STATE_BIT_BRI))
     {
         zllSocSetLevel(cmdbuf, newlight->bri, time, dstAddr, endpoint, addrMode);
         light->bri = newlight->bri;
-		udelay(CC2530_PROGRAMMING_INTERVAL); 
+		bsp_udelay(CC2530_PROGRAMMING_INTERVAL); 
     }
 
     if(bitmap & (1<<HUE_STATE_BIT_HUE))
@@ -447,27 +446,27 @@ uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
         // TI hue is 8 bits but philips is 16 bits
         zllSocSetHue(cmdbuf, newlight->hue, time, dstAddr, endpoint, addrMode);
         light->hue = newlight->hue;
-		udelay(CC2530_PROGRAMMING_INTERVAL); 
+		bsp_udelay(CC2530_PROGRAMMING_INTERVAL); 
     }
 
     if(bitmap & (1<<HUE_STATE_BIT_SAT))
     {
         zllSocSetSat(cmdbuf, newlight->sat, time, dstAddr, endpoint, addrMode);
         light->sat = newlight->sat;
-		udelay(CC2530_PROGRAMMING_INTERVAL); 
+		bsp_udelay(CC2530_PROGRAMMING_INTERVAL); 
     }
     
     if(bitmap & (1<<HUE_STATE_BIT_XY))
     {
         zllSocSetColor(cmdbuf, newlight->x, newlight->y, time, dstAddr, endpoint, addrMode);
-		udelay(CC2530_PROGRAMMING_INTERVAL); 
+		bsp_udelay(CC2530_PROGRAMMING_INTERVAL); 
     }
 
     if(bitmap & (1<<HUE_STATE_BIT_CT))
     {
         uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "set ct: 0x%x\n", newlight->ct);
         zllSocSetColorTemperature(cmdbuf, newlight->ct, time, dstAddr, endpoint, addrMode);
-		udelay(CC2530_PROGRAMMING_INTERVAL); 
+		bsp_udelay(CC2530_PROGRAMMING_INTERVAL); 
     }
 
     if(bitmap & (1<<HUE_STATE_BIT_ALERT))
@@ -484,28 +483,28 @@ uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
     {
         zllSocSetLevel(cmdbuf, light->bri + newlight->bri, time, dstAddr, endpoint, addrMode);
         light->bri += newlight->bri;
-		udelay(CC2530_PROGRAMMING_INTERVAL); 
+		bsp_udelay(CC2530_PROGRAMMING_INTERVAL); 
     }
 
     if(bitmap & (1<<HUE_STATE_BIT_HUEINC))
     {
         zllSocSetHue(cmdbuf, light->hue + newlight->hue, time, dstAddr, endpoint, addrMode);
         light->hue += newlight->hue;
-		udelay(CC2530_PROGRAMMING_INTERVAL); 
+		bsp_udelay(CC2530_PROGRAMMING_INTERVAL); 
     }
 
     if(bitmap & (1<<HUE_STATE_BIT_SATINC))
     {
         zllSocSetSat(cmdbuf, light->sat + newlight->sat, time, dstAddr, endpoint, addrMode);
         light->sat += newlight->sat;
-		udelay(CC2530_PROGRAMMING_INTERVAL); 
+		bsp_udelay(CC2530_PROGRAMMING_INTERVAL); 
     }
 
     if(bitmap & (1<<HUE_STATE_BIT_XYINC))
     {
         zllSocSetColor(cmdbuf, light->x+newlight->x, light->y+newlight->y, time, dstAddr, endpoint, addrMode);
         // xyinc TBD
-        udelay(CC2530_PROGRAMMING_INTERVAL); 
+        bsp_udelay(CC2530_PROGRAMMING_INTERVAL); 
     }
 
     if(bitmap & (1<<HUE_STATE_BIT_CTINC))
@@ -915,7 +914,6 @@ uint32_t zllctrl_connect_to_soc(hue_t *hue)
         return ret;
     }
 
-#if 0
 	/* get device info */
 	zllSocUtilGetDevInfo(NULL);
     ret = zllctrl_start_soc_eventloop(ZLL_RESP_DEFAULT_TIMEOUT+tick(), hue, zllsoc_is_devinfo_processed);
@@ -924,7 +922,6 @@ uint32_t zllctrl_connect_to_soc(hue_t *hue)
         uprintf(UPRINT_ERROR, UPRINT_BLK_HUE, "can't get device info\n");
         return ret;
     }
-#endif
     return ret;
 }
 

@@ -217,7 +217,7 @@ int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms)
         bsp_gettime(&tv_sec, &tv_nsec);
 		printi(&sprintdev, tv_sec, 16, 0, 6 /* width */, 2 /* PAD_ZERO */, 'a');
         prints(&sprintdev, ".", 0, 0);
-        printi(&sprintdev, tv_nsec/1000, 16, 0, 6 /* width */, 2 /* PAD_ZERO */, 'a');
+        printi(&sprintdev, tv_nsec, 16, 0, 6 /* width */, 2 /* PAD_ZERO */, 'a');
 		prints(&sprintdev, " ", 0, 0);
 	}
 	

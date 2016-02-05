@@ -38,8 +38,6 @@ extern void kservice_init();
 extern void lwip_sys_init();
 extern void http_server_netconn_init();
 extern void cc2530ctrl_init();
-extern void bsp_gettime_init();
-extern uint32_t udelay_init();
 
 #ifdef INCLUDE_USER_APP_INIT
 extern void user_app_init();
@@ -90,8 +88,6 @@ static void root_task(void *p)
 	http_server_netconn_init();
 	kprintf("  HTTP server inited.\n");
 	#endif
-
-	udelay_init();
 	
 	user_app_init();
 
@@ -135,13 +131,23 @@ static void default_sched_hook(struct dtask *from, struct dtask *to)
 /* hardware init before os is ready */
 void os_hw_init()
 {
-	/* init USART */
-	uart_init_console(SERIAL_UART_PORT, SERIAL_UART_BAUDRATE, 0);
+	/* system clock (RCC) init */
+	SystemInit();
+	
+	/* Configure Flash prefetch, Instruction cache, Data cache */ 
+	__HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+	__HAL_FLASH_DATA_CACHE_ENABLE();
+	__HAL_FLASH_PREFETCH_BUFFER_ENABLE();
 
 	/* init interrupt related matters */
 	interrupt_init();
+	
+	/* init USART */
+	uart_init_console(SERIAL_UART_PORT, SERIAL_UART_BAUDRATE, 0);
 
+	/* real time init: using TIM2 and don't generate interrupt */
 	bsp_gettime_init();
+	bsp_udelay_init();
 }
 
 // TODO: To standard this scenario

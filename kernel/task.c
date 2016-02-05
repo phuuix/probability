@@ -606,7 +606,7 @@ sche_end:
 /*-----------------------------------------------------------------------*/
 int task_delay(uint32_t tick)
 {
-	int ret;
+	int ret = RERROR;
 	uint32_t f;
 	
 	if(tick > 0){

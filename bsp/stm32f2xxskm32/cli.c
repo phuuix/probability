@@ -14,6 +14,7 @@
 #include "siprintf.h"
 #include "journal.h"
 #include "assert.h"
+#include "stm32f2xx_hal.h"
 
 /* all commands:
  * i: show tasks
@@ -144,6 +145,7 @@ int cmd_show(struct shell_session *ss, int argc, char **argv)
 			break;
 		case 'c':
 #ifdef INCLUDE_PMCOUNTER
+			kprintf("  SysClk %dMHz %d MLoops/S\n", HAL_RCC_GetHCLKFreq()/1000000, bsp_udelay_init());
 			f = bsp_fsave();
 			pmc_dump();
 			bsp_frestore(f);

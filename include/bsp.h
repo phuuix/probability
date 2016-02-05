@@ -74,6 +74,11 @@ char *bsp_task_init(int index, void (*task)(void *p), void *parm, char *stack, v
 
 /* libc interface */
 void bsp_gettime(uint32_t *tv_sec, uint32_t *tv_nsec);
+void bsp_gettime_init();
+uint32_t bsp_udelay_init();
+void bsp_udelay(uint32_t us);
+
+
 
 /* GDB remote debug stub interface */
 void breakpoint();

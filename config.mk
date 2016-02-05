@@ -81,7 +81,7 @@ OPTFLAGS = #-Os -fomit-frame-pointer
 
 CPPFLAGS = $(DBGFLAGS) $(OPTFLAGS) $(RELFLAGS) -nostdinc -fno-builtin -I$(INCL)
 
-CFLAGS   := $(CPPFLAGS) -g -Wall -finline-functions -fno-stack-protector
+CFLAGS   := $(CPPFLAGS) -g -Wall -Wno-attributes -finline-functions -fno-stack-protector
 #AFLAGS   := -E -D__ASSEMBLY__ $(CPPFLAGS)
 AFLAGS   := -g -x assembler-with-cpp -D__ASSEMBLY__ $(CPPFLAGS)
 

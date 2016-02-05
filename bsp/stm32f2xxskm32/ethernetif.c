@@ -74,7 +74,6 @@ ETH_HandleTypeDef EthHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 static void ethernetif_input( void const * argument );
-extern void udelay(uint32_t us);
 
 /* Private functions ---------------------------------------------------------*/
 /*******************************************************************************
