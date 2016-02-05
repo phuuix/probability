@@ -42,7 +42,7 @@ enum journal_class1_type
 	JOURNAL_TYPE_MTXPOST,
 	JOURNAL_TYPE_MTXPEND,
 	JOURNAL_TYPE_MSGQPOST,
-	JOURNAL_TYPE_MSGQPEND,
+	JOURNAL_TYPE_MSGQPEND,  // 9
 	JOURNAL_TYPE_CLASS1MAX
 };
 
@@ -256,7 +256,7 @@ struct journal_msgqdestroy
 };
 
 
-typedef union journal_class2
+typedef struct journal_class2
 {
 	uint32_t usec:20;           // 20 bits can hold 1 second duration in us
 	uint32_t t_current:8;

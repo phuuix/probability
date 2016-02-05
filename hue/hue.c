@@ -321,6 +321,42 @@ int process_hue_api_delete_group(char *responseBuf, uint32_t size)
 }
 
 /*
+3. Schedules API
+3.1. Get all schedules
+*/
+int process_hue_api_get_all_schedules(char *responseBuf, uint32_t size)
+{
+	return hue_json_build_all_schedules(responseBuf, size, &g_hue);
+}
+
+/*
+4. Scenes API
+4.1. Get all scenes
+*/
+int process_hue_api_get_all_scenes(char *responseBuf, uint32_t size)
+{
+	return hue_json_build_all_scenes(responseBuf, size, &g_hue);
+}
+
+/*
+5. Sensors API
+5.1. Get all sensors
+*/
+int process_hue_api_get_all_sensors(char *responseBuf, uint32_t size)
+{
+	return hue_json_build_all_sensors(responseBuf, size, &g_hue);
+}
+
+/*
+6. Rules API
+6.1. Get all rules
+*/
+int process_hue_api_get_all_rules(char *responseBuf, uint32_t size)
+{
+	return hue_json_build_all_rules(responseBuf, size, &g_hue);
+}
+
+/*
 7 Configuration API
 7.1. Create user
 7.2. Get configuration

@@ -50,7 +50,9 @@ len,   /*RPC payload Len                                      */     \
           + ((uint32_t)((Byte1) & 0x00FF) << 8) \
           + ((uint32_t)((Byte2) & 0x00FF) << 16) \
           + ((uint32_t)((Byte3) & 0x00FF) << 24)))
-          
+
+#define HEX2BIN(c) (c >= 'a') ? (c - 'a' + 10) : ((c >= 'A')?(c - 'A' + 10):(c - '0'))
+
 /*********************************************************************
  * CONSTANTS
  */
@@ -198,6 +200,49 @@ int zllctrl_write(int zll_fd, uint8_t *cmd, uint16_t cmd_len)
 	return ret;
 }
 
+/*********************************************************************
+ * @fn      zllSocSendRaw
+ *
+ * @brief   Send the raw packet to the CC253x.
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+uint32_t zllSocSendRaw(char *cmbBuff)
+{
+	uint8_t hexLen = 0, pktLen = 0, i;
+	char *packet;
+	uint8_t cmd[100];
+
+	packet = strstr(cmbBuff, "0x");
+	if(packet)
+	{
+		packet += 2;
+		hexLen = strlen(packet);
+	}
+
+	if(hexLen > 8) // packet header: SOF LEN CMD0 CMD1
+	{
+		/* covert hex to bin */
+		for(i=0; i<hexLen; i+=2)
+		{
+			cmd[i>>1] = HEX2BIN(packet[i]);
+			cmd[i>>1] = (cmd[i>>1] << 4) | (HEX2BIN(packet[i+1]));
+		}
+
+		pktLen = cmd[1] + 5; // packet header + FCS
+		/* SET FCS to zero */
+		cmd[pktLen-1] = 0;
+		
+		calcFcs(cmd, pktLen);
+		zllctrl_write(0,cmd,pktLen);
+  
+		return pktLen;
+	}
+
+	return 0;
+}
 
 /*********************************************************************
  * @fn      zllSocTouchLink
@@ -1642,32 +1687,37 @@ static void processRpcSysAppZclFoundation(uint8_t *zclRspBuff, uint8_t zclFrameL
  *************************************************************************************************/
 static void processRpcSysApp(uint8_t *rpcBuff)
 {
-  if( rpcBuff[1] == MT_APP_ZLL_TL_IND )
+  uint8_t cmd0, cmd1, status;
+
+  cmd0 = rpcBuff[0];
+  cmd1 = rpcBuff[1];
+  if( cmd1 == MT_APP_ZLL_TL_IND )
   {
     processRpcSysAppTlInd(&rpcBuff[2]);
   }          
-  else if( rpcBuff[1] == MT_APP_ZLL_NEW_DEV_IND )
+  else if( cmd1 == MT_APP_ZLL_NEW_DEV_IND )
   {
     processRpcSysAppNewDevInd(&rpcBuff[2]);
   }  
-  else if( rpcBuff[1] == MT_APP_RSP )
+  else if( cmd1 == MT_APP_RSP )
   {
     processRpcSysAppZcl(&rpcBuff[2]);
   }    
-  else if( rpcBuff[1] == 0 )
+  else if( cmd1 == 0 )
   {
-    if( rpcBuff[2] == 0)
+    status = rpcBuff[2];
+    if( status == 0)
     {
-      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysApp: Command Received Successfully, cmd0=0x%02x cmd1=0x%02x\n\n", rpcBuff[1], rpcBuff[2]);
+      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysApp: Command Received Successfully, cmd=(0x%02x 0x%02x)\n", cmd0, cmd1);
     }
     else
     {
-      uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysApp: Command Error, cmd0=0x%02x cmd1=0x%02x\n\n", rpcBuff[1], rpcBuff[2]);
+      uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysApp: Command Error, cmd=(0x%02x 0x%02x) status=%d\n", cmd0, cmd1, status);
     }    
   }
   else
   {
-    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysApp: Unsupported MT App Msg, cmd0=0x%02x cmd1=0x%02x\n", rpcBuff[1], rpcBuff[2]);
+    uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "processRpcSysApp: Unsupported MT App Msg, cmd=(0x%02x 0x%02x)\n", cmd0, cmd1);
   }
     
   return;   
@@ -1861,6 +1911,11 @@ void zllSocProcessRpc (uint8_t *rpcBuff, uint16_t length)
           processRpcSysUtil(&rpcBuff[2]);
 		  break;
         }
+		case MT_RPC_SYS_RES0:
+		{
+		  uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "zllSocProcessRpc: CMD0:%x, CMD1:%x failure status:%d\n", rpcBuff[2], rpcBuff[3], rpcBuff[4]);
+		  break;
+		}
         default:
         {
           uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "zllSocProcessRpc: CMD0:%x, CMD1:%x, not handled\n", rpcBuff[2], rpcBuff[3] );

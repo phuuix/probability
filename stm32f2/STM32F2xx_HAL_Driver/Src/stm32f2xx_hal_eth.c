@@ -211,8 +211,18 @@ HAL_StatusTypeDef HAL_ETH_Init(ETH_HandleTypeDef *heth)
   (heth->Instance)->DMABMR |= ETH_DMABMR_SR;
   
   /* Wait for software reset */
+  uint32_t initsec, initnsec;
+  bsp_gettime(&initsec, &initnsec);
   while (((heth->Instance)->DMABMR & ETH_DMABMR_SR) != (uint32_t)RESET)
   {
+    uint32_t tv_sec, tv_nsec;
+  	// puhuix: break if too long to wait
+  	bsp_gettime(&tv_sec, &tv_nsec);
+	if(tv_sec > initsec + 3)
+		{
+		kprintf("HAL_ETH_Init() failure!!!!!!!\n");
+		return HAL_ERROR;
+		}
   }
   
   /*-------------------------------- MAC Initialization ----------------------*/

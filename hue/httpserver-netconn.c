@@ -28,7 +28,6 @@ const static char http_index_html[] = "<html><head><title>Probability</title></h
 const static char http_html_hdr_err[] = "HTTP/1.1 404 Not Found\r\nContent-type: text/html\r\n\r\n";
 
 const static char http_json_hdr[] = "HTTP/1.1 200 OK\r\nCatch-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0\r\nPragma: no-cache\r\nConnection: close\r\nContent-type: application/json\r\n\r\n";
-//const static char http_xml_hdr[] = "HTTP/1.1 200 OK\r\nContent-type: text/xml\r\nConnection: Keep-Alive\r\n\r\n";
 const static char http_xml_hdr[] = "HTTP/1.1 200 OK\r\nContent-type: text/xml\r\nConnection: close\r\n\r\n";
 
 const static char http_description_xml1[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> \
@@ -40,7 +39,7 @@ const static char http_description_xml1[] = "<?xml version=\"1.0\" encoding=\"UT
 
 const static char http_description_xml2[] = "<device> \
 <deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType> \
-<friendlyName>My bridge (192.168.100.10)</friendlyName> \
+<friendlyName>My bridge </friendlyName> \
 <manufacturer>Royal Philips Electronics</manufacturer> \
 <manufacturerURL>http://www.philips.com</manufacturerURL> \
 <modelDescription>Philips hue Personal Wireless Lighting</modelDescription> \
@@ -49,8 +48,10 @@ const static char http_description_xml2[] = "<device> \
 <modelURL>http://www.meethue.com</modelURL> \
 <serialNumber>0017881733aa</serialNumber>";
 
+const static char http_description_xml3[] = "<presentationURL>index.html</presentationURL> \
+</device></root>";
 
-
+/*
 const static char http_description_xml3[] = "<presentationURL>index.html</presentationURL> \
 <iconList> \
 <icon> \
@@ -69,7 +70,7 @@ const static char http_description_xml3[] = "<presentationURL>index.html</presen
 </icon> \
 </iconList> \
 </device></root>";
-
+*/
 #define HTTP_REQ_BUFF_SIZE 1024
 #define HTTP_RESP_BUFF_SIZE 2048
 static char http_request_buf[HTTP_REQ_BUFF_SIZE];
@@ -220,6 +221,38 @@ static int http_serv_get(struct netconn *conn, http_parser_t *http_parser, char 
             /* Get all groups: /api/<username>/groups */
             responseBuf_len += process_hue_api_get_all_groups(&responseBuf[responseBuf_len], max_resp_size-responseBuf_len);
         }
+		else if((http_parser->val_token[2] == HUE_URL_TOKEN_SCHEDULES) && (http_parser->num_token == 3))
+		{
+			memcpy(&responseBuf[responseBuf_len], http_json_hdr, sizeof(http_json_hdr)-1);
+            responseBuf_len += sizeof(http_json_hdr)-1;
+
+            /* Get all schedules: /api/<username>/schedules */
+            responseBuf_len += process_hue_api_get_all_schedules(&responseBuf[responseBuf_len], max_resp_size-responseBuf_len);
+		}
+		else if((http_parser->val_token[2] == HUE_URL_TOKEN_SCENES) && (http_parser->num_token == 3))
+		{
+			memcpy(&responseBuf[responseBuf_len], http_json_hdr, sizeof(http_json_hdr)-1);
+            responseBuf_len += sizeof(http_json_hdr)-1;
+
+            /* Get all scenes: /api/<username>/scenes */
+            responseBuf_len += process_hue_api_get_all_scenes(&responseBuf[responseBuf_len], max_resp_size-responseBuf_len);
+		}
+		else if((http_parser->val_token[2] == HUE_URL_TOKEN_SENSORS) && (http_parser->num_token == 3))
+		{
+			memcpy(&responseBuf[responseBuf_len], http_json_hdr, sizeof(http_json_hdr)-1);
+            responseBuf_len += sizeof(http_json_hdr)-1;
+
+            /* Get all sensors: /api/<username>/sensors */
+            responseBuf_len += process_hue_api_get_all_sensors(&responseBuf[responseBuf_len], max_resp_size-responseBuf_len);
+		}
+		else if((http_parser->val_token[2] == HUE_URL_TOKEN_RULES) && (http_parser->num_token == 3))
+		{
+			memcpy(&responseBuf[responseBuf_len], http_json_hdr, sizeof(http_json_hdr)-1);
+            responseBuf_len += sizeof(http_json_hdr)-1;
+
+            /* Get all sensors: /api/<username>/rules */
+            responseBuf_len += process_hue_api_get_all_rules(&responseBuf[responseBuf_len], max_resp_size-responseBuf_len);
+		}
         else if((http_parser->val_token[2] == HUE_URL_TOKEN_GROUPS) && (http_parser->num_token == 4))
         {
             uint32_t group_id;
@@ -306,18 +339,21 @@ static int http_serv_put(struct netconn *conn, http_parser_t *http_parser, char 
         
         /* this is rename light command */
         light_id = strtol(http_parser->url_token[3], NULL, 10);
-        
-        json_light_name = cJSON_GetObjectItem(json_root,"name");
-        if(!json_light_name)
-        	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "rename light: not found light name!\n");
-        else
-        {
-        	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "rename light %d:%s\n", light_id, json_light_name->valuestring);
 
-            memcpy(responseBuf, http_json_hdr, sizeof(http_json_hdr)-1);
-            responseBuf_len += sizeof(http_json_hdr)-1;
-            responseBuf_len += process_hue_api_rename_light(light_id, json_light_name->valuestring, &responseBuf[responseBuf_len], max_resp_size-responseBuf_len);
-        }
+		if(json_root)
+		{
+	        json_light_name = cJSON_GetObjectItem(json_root,"name");
+	        if(!json_light_name)
+	        	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "rename light: not found light name!\n");
+	        else
+	        {
+	        	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "rename light %d:%s\n", light_id, json_light_name->valuestring);
+
+	            memcpy(responseBuf, http_json_hdr, sizeof(http_json_hdr)-1);
+	            responseBuf_len += sizeof(http_json_hdr)-1;
+	            responseBuf_len += process_hue_api_rename_light(light_id, json_light_name->valuestring, &responseBuf[responseBuf_len], max_resp_size-responseBuf_len);
+	        }
+		}
     }
     else if(http_parser->val_token[2] == HUE_URL_TOKEN_LIGHTS && http_parser->val_token[4] == HUE_URL_TOKEN_STATE)
     {
@@ -404,6 +440,30 @@ static int http_serv_put(struct netconn *conn, http_parser_t *http_parser, char 
     return responseBuf_len;
 }
 
+static void http_dump_string(char *title, char *str)
+{
+	char c;
+	uint16_t len;
+	int offset;
+	
+	len = strlen(str);
+
+	/* uprintf can only support about 200 bytes for each print */
+	for(offset=0; offset<len; offset += 200)
+	{
+		if(offset + 200 < len)
+		{
+			c = str[offset+200];
+			str[offset+200] = 0;
+		}
+		uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "%s(%04d): %s\n", title, offset, &str[offset]);
+		if(offset + 200 < len)
+		{
+			str[offset+200] = c;
+		}
+	}
+}
+
 /** Serve one HTTP connection accepted in the http thread */
 static void
 http_server_netconn_serve(struct netconn *conn)
@@ -426,39 +486,43 @@ http_server_netconn_serve(struct netconn *conn)
     requestBuf[requestBuf_len] = '\0';
 
     // for debug
-    uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "http packet: %s\n", (char *)requestBuf);
-    
+    http_dump_string("http request", requestBuf);
 
     memset(&http_parser, 0, sizeof(http_parser));
     http_parse_request(requestBuf, requestBuf_len, &http_parser);
 
-	memset(responseBuf,0,HTTP_RESP_BUFF_SIZE);
+	/* if request contains "Expect: 100-continue", there will be no the body part */ 
+	if(http_parser.content_len <= strlen(http_parser.content))
+	{
+		memset(responseBuf,0,HTTP_RESP_BUFF_SIZE);
 
-    if(http_parser.req_type == HTTP_REQTYPE_GET )
-    {
-      responseBuf_len = http_serv_get(conn, &http_parser, responseBuf, HTTP_RESP_BUFF_SIZE);
+	    if(http_parser.req_type == HTTP_REQTYPE_GET )
+	    {
+	      responseBuf_len = http_serv_get(conn, &http_parser, responseBuf, HTTP_RESP_BUFF_SIZE);
+		}
+	    else if(http_parser.req_type == HTTP_REQTYPE_POST && http_parser.content_type == HTTP_CONTENTTYPE_JSON)
+	    {
+	      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "http content: %s\n", http_parser.content);
+	      responseBuf_len = http_serv_post(conn, &http_parser, responseBuf, HTTP_RESP_BUFF_SIZE);
+	    }
+		else if(http_parser.req_type == HTTP_REQTYPE_PUT && http_parser.content_type == HTTP_CONTENTTYPE_JSON)
+	    {
+	      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "http content: %s\n", http_parser.content);
+	      responseBuf_len = http_serv_put(conn, &http_parser, responseBuf, HTTP_RESP_BUFF_SIZE);
+	    }
 	}
-    else if(http_parser.req_type == HTTP_REQTYPE_POST && http_parser.content_type == HTTP_CONTENTTYPE_JSON)
-    {
-      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "http content: %s\n", http_parser.content);
-      responseBuf_len = http_serv_post(conn, &http_parser, responseBuf, HTTP_RESP_BUFF_SIZE);
-    }
-	else if(http_parser.req_type == HTTP_REQTYPE_PUT && http_parser.content_type == HTTP_CONTENTTYPE_JSON)
-    {
-      uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "http content: %s\n", http_parser.content);
-      responseBuf_len = http_serv_put(conn, &http_parser, responseBuf, HTTP_RESP_BUFF_SIZE);
-    }
 
     if(responseBuf_len)
     {
       netconn_write(conn,responseBuf,responseBuf_len,NETCONN_NOCOPY);
 
-      uprintf(UPRINT_DEBUG, UPRINT_BLK_HUE, "http response: %s\n", (char *)responseBuf);
+	  // for debug
+      http_dump_string("http response", responseBuf);
     }
     else
     {
       http_serv_send_err_page(conn);
-      uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unknow HTTP request\n");
+      uprintf(UPRINT_WARNING, UPRINT_BLK_HUE, "unknown HTTP request\n");
     }
   }
 

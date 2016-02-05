@@ -63,7 +63,7 @@ typedef struct http_parser
 	uint16_t content_len;
 	uint8_t keep_live;
     uint8_t num_request_header;
-    uint8_t num_token;
+    uint8_t num_token;							// number of URL token
     uint8_t val_token[HTTP_URL_TOKEN_MAX_NUM];
 	char *url_token[HTTP_URL_TOKEN_MAX_NUM];
 	char *content;

@@ -67,57 +67,24 @@ void cc2530ctrl_mail_handle(uint32_t *mail)
 
 static uint8_t cc2530_com_rxbuf[256];
 static uint8_t cc2530_com_rxoffset;
+uint32_t nOvrErr, nSynErr;
+#include "journal.h"
 static void cc2530_com_isr_func(int n)
 {
-#if 1
-	uint32_t tmp1 = 0, tmp2 = 0;
 	UART_HandleTypeDef *huart = &UartHandle[CC2530_COM];
 
-	tmp1 = __HAL_UART_GET_FLAG(huart, UART_FLAG_PE);
-	tmp2 = __HAL_UART_GET_IT_SOURCE(huart, UART_IT_PE);  
-	/* UART parity error interrupt occurred ------------------------------------*/
-	if((tmp1 != RESET) && (tmp2 != RESET))
-	{ 
-		__HAL_UART_CLEAR_PEFLAG(huart);
+	journal_user_defined(JOURNAL_TYPE_CLASS1MAX, 0);
 
-		huart->ErrorCode |= HAL_UART_ERROR_PE;
-	}
-
-	tmp1 = __HAL_UART_GET_FLAG(huart, UART_FLAG_FE);
-	tmp2 = __HAL_UART_GET_IT_SOURCE(huart, UART_IT_ERR);
-	/* UART frame error interrupt occurred -------------------------------------*/
-	if((tmp1 != RESET) && (tmp2 != RESET))
-	{ 
-		__HAL_UART_CLEAR_FEFLAG(huart);
-
-		huart->ErrorCode |= HAL_UART_ERROR_FE;
-	}
-
-	tmp1 = __HAL_UART_GET_FLAG(huart, UART_FLAG_NE);
-	tmp2 = __HAL_UART_GET_IT_SOURCE(huart, UART_IT_ERR);
-	/* UART noise error interrupt occurred -------------------------------------*/
-	if((tmp1 != RESET) && (tmp2 != RESET))
-	{ 
-		__HAL_UART_CLEAR_NEFLAG(huart);
-
-		huart->ErrorCode |= HAL_UART_ERROR_NE;
-	}
-
-	tmp1 = __HAL_UART_GET_FLAG(huart, UART_FLAG_ORE);
-	tmp2 = __HAL_UART_GET_IT_SOURCE(huart, UART_IT_ERR);
-	/* UART Over-Run interrupt occurred ----------------------------------------*/
-	if((tmp1 != RESET) && (tmp2 != RESET))
-	{ 
+	if(huart->Instance->SR & (UART_FLAG_PE | UART_FLAG_FE | UART_FLAG_NE | UART_FLAG_ORE))
+	{
 		__HAL_UART_CLEAR_OREFLAG(huart);
-
-		huart->ErrorCode |= HAL_UART_ERROR_ORE;
+		nOvrErr ++;
 	}
- #endif
+ 
 	while(__HAL_USART_GET_FLAG(&UartHandle[CC2530_COM], USART_FLAG_RXNE))
     {
     	/* get one char from hw */
-        cc2530_com_rxbuf[cc2530_com_rxoffset++] = uart_getc(CC2530_COM);
-        //kprintf("cc2530 isr: 0x%02x SR=%04x\n", cc2530_com_rxbuf[cc2530_com_rxoffset-1], pUsart->SR);
+        cc2530_com_rxbuf[cc2530_com_rxoffset++] = (uint8_t)(huart->Instance->DR & (uint8_t)0x00FF);
     	
     	if(cc2530_com_rxoffset >= 5)
     	{
@@ -131,8 +98,10 @@ static void cc2530_com_isr_func(int n)
     	}
     	else if(cc2530_com_rxbuf[0] != 0xFE)
     	{
-    		/* 0xFE: (MT ROF), error with sync, reset Rx offset */
+    		/* 0xFE: (MT SOF), error with sync, reset Rx offset */
     		cc2530_com_rxoffset = 0;
+			++nSynErr;
+			uprintf(UPRINT_DEBUG, /*UPRINT_BLK_HUE*/6, "cc2530 non-sync:  nSynErr=%d nOvrErr=%d: 0x%02x\n", nSynErr, nOvrErr, cc2530_com_rxbuf[0]);
     	}
     }
 }
@@ -185,7 +154,7 @@ void cc2530ctrl_task(void *p)
 	
 	for(;;)
 	{
-		ret = mbox_pend(&cdc_mbox, mail, 1);
+		ret = mbox_pend(&cdc_mbox, mail, 100);
 		switch (ret)
 		{
 			case ROK:

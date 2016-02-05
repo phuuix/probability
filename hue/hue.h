@@ -56,6 +56,7 @@
 #define HUE_STATE_BIT_HUEINC    10
 #define HUE_STATE_BIT_CTINC     11
 #define HUE_STATE_BIT_XYINC     12
+#define HUE_STATE_BIT_SATINC    13
 
 typedef struct zigbee_addr
 {
@@ -191,23 +192,10 @@ struct hue_tm
 #define HUE_MAIL_CMD_SET_ONE_LIGHT    5
 #define HUE_MAIL_CMD_DELETE_LIGHT     6
 #define HUE_MAIL_CMD_CONSOLE          64
+#define HUE_MAIL_CMD_SOCMSG           65
 #define HUE_MAIL_CMD_SSDP             128
 
-/* hue light state bitmap */
-#define HUE_LIGHT_STATE_ON            0
-#define HUE_LIGHT_STATE_BRI           1
-#define HUE_LIGHT_STATE_HUE           2
-#define HUE_LIGHT_STATE_SAT           3
-#define HUE_LIGHT_STATE_XY            4
-#define HUE_LIGHT_STATE_CT            5
-#define HUE_LIGHT_STATE_ALERT         6
-#define HUE_LIGHT_STATE_EFFECT        7
-#define HUE_LIGHT_STATE_TIME          8
-#define HUE_LIGHT_STATE_BRIINC        9
-#define HUE_LIGHT_STATE_HUEINC        10
-#define HUE_LIGHT_STATE_SATINC        11
-#define HUE_LIGHT_STATE_XYINC         12
-#define HUE_LIGHT_STATE_CTINC         13
+
 
 typedef union hue_mail_s
 {
@@ -246,6 +234,14 @@ typedef union hue_mail_s
         uint32_t ipaddr;
     } ssdp;
 
+	struct // soc messeage
+	{
+		uint8_t cmd;
+		uint8_t filler1;
+		uint16_t length;
+		uint8_t *data;
+	} socmsg;
+	
     struct //
     {
         uint8_t cmd;
@@ -255,14 +251,6 @@ typedef union hue_mail_s
         uint8_t *data;
     } common;
 }hue_mail_t;
-
-typedef struct zll_mail_s
-{
-	uint8_t event;
-    uint8_t flags;
-    uint16_t length;
-	uint8_t *data;
-}zll_mail_t;
 
 #define HUE_MAX_USERS 8
 #define HUE_MAX_LIGHTS 32
@@ -290,7 +278,10 @@ int process_hue_api_get_configuration(char *responseBuf, uint32_t size);
 int process_hue_api_get_full_state(char *responseBuf, uint32_t size);
 int process_hue_api_get_group_attr(uint32_t group_id, char *responseBuf, uint32_t size);
 int process_hue_api_get_all_groups(char *responseBuf, uint32_t size);
-
+int process_hue_api_get_all_schedules(char *responseBuf, uint32_t size);
+int process_hue_api_get_all_scenes(char *responseBuf, uint32_t size);
+int process_hue_api_get_all_sensors(char *responseBuf, uint32_t size);
+int process_hue_api_get_all_rules(char *responseBuf, uint32_t size);
 
 void hue_localtime(uint32_t t, struct hue_tm *tm);
 void hue_data_init(hue_t *hue);

@@ -24,6 +24,8 @@
 
 #include "uart.h"
 #include "cli.h"
+#include "stm32f2xx.h"
+#include "stm32f2xx_hal.h"
 
 int getline(char *buf, int len);
 
@@ -31,16 +33,34 @@ int getline(char *buf, int len);
 #define TCONSOLE_PRIORITY 0x3
 #define INT_CONSOLE 39+16   //USART3
 
-#define CBUF_SIZE 20
+#define CBUF_SIZE 32
 static mbox_t console_mbox;
 static uint32_t console_cbuf[CBUF_SIZE*sizeof(uint32_t)];
 
+extern UART_HandleTypeDef UartHandle[2];
+
 static void serial_isr_func(int n)
 {
-	uint32_t c;
+	uint32_t tmp1 = 0;
+	UART_HandleTypeDef *huart = &UartHandle[SERIAL_UART_PORT];
+	uint32_t buf[16];
+	uint32_t nBytes = 0;
+
+	if(huart->Instance->SR & (UART_FLAG_PE | UART_FLAG_FE | UART_FLAG_NE | UART_FLAG_ORE))
+	{
+		__HAL_UART_CLEAR_OREFLAG(huart);
+	}
+
+	while((__HAL_UART_GET_FLAG(huart, UART_FLAG_RXNE) == SET) && (nBytes < 16))
+	{
+		buf[nBytes ++] = (uint8_t)(huart->Instance->DR & (uint8_t)0x00FF);
+	}
 	
-	c = uart_getc(SERIAL_UART_PORT);
-	mbox_post(&console_mbox, &c);
+	for(tmp1=0; tmp1<nBytes; tmp1++)
+	{
+		mbox_post(&console_mbox, &buf[tmp1]);
+	}
+
 }
 
 static void console_task(void *p)
@@ -98,7 +118,6 @@ int getline(char *buf, int len)
 	int n = 0, term = 0;
 	char c;
 
-//	while(c=getchar(), c!=0 && c!='\n' && n<len)
 	do{
 		c=getcharacter();
 		//kprintf("rx char: %c (%d)\n", c, c);

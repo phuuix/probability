@@ -101,14 +101,15 @@ void task_unlock()
 }
 
 /* this callback always runs in interrupt-prohibit mode */
-static uint32_t task_timeout(void *timer, uint32_t t, uint32_t param2)
+static int32_t task_timeout(void *timer, uint32_t t, uint32_t param2)
 {
 	struct dtask *task = &systask[t];
 
 	assert(task->flags & TASK_FLAGS_DELAYING);
 
-	/* add task to sysready queue */
-	task_undelay(t);
+	/* reset delaying flag */
+	// task_undelay(t);
+	task->flags &= ~TASK_FLAGS_DELAYING;
 	
 	/* add task into sysready_queue, but don't schedule right now */
 	if(task->taskq)

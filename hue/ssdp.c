@@ -16,7 +16,8 @@
 #include "hue.h"
 
 struct udp_pcb *g_ssdp_upcb;
-static ptimer_t ssdp_timer[2];
+#define SSDP_TIMER_MAX_NUM 4
+static ptimer_t ssdp_timer[SSDP_TIMER_MAX_NUM];
 
 #define SSDP_PACKET_MAXSIZE 512
 static uint8_t ssdp_packet[SSDP_PACKET_MAXSIZE];
@@ -82,9 +83,9 @@ int ssdp_transmit(uint32_t remote_ip, uint16_t remote_port, uint8_t *data, uint1
 }
 
 
-uint32_t ssdp_timeout_multicast(void *tim, uint32_t param1, uint32_t param2)
+int32_t ssdp_timeout_multicast(void *tim, uint32_t param1, uint32_t param2)
 {
-    int ret;
+    int ret = PTIMER_RET_OK;
     uint16_t new_state = SSDP_STATE_00, state = (param1>>16), interval = SSDP_INTERVAL_CYCLE;
     uint16_t port = (param1 & 0xFFFF);
     uint32_t ip = param2; // param2 is value of ptimer->param[1]
@@ -208,17 +209,21 @@ USN: uuid:2f402f80-da50-11e1-9b23-0017881733fb::upnp:rootdevice      <-- changed
         /* update the new state and start timer again */
         ptimer->param[0] = (new_state<<16) | port;
         ptimer_start(&g_zll_timer_table, ptimer, interval);
+		ret = PTIMER_RET_RESTARTED;
     }
     else
+    {
         uprintf(UPRINT_WARNING, UPRINT_BLK_SSDP, "failed to send SSDP multicast: %d\n", ret);
+		ret = PTIMER_RET_RESTARTED;
+    }
 
     return ret;
 }
 
 
-uint32_t ssdp_timeout_unicast(void *tim, uint32_t param1, uint32_t param2)
+int32_t ssdp_timeout_unicast(void *tim, uint32_t param1, uint32_t param2)
 {
-    int ret;
+    int ret = PTIMER_RET_OK;
     uint16_t new_state = SSDP_STATE_00, state = (param1>>16), interval = SSDP_INTERVAL_CYCLE;
     uint16_t port = (param1 & 0xFFFF);
     uint32_t ip = param2; // param2 is value of ptimer->param[1]
@@ -296,6 +301,7 @@ USN: uuid:2f402f80-da50-11e1-9b23-0017881733fb
 	        /* update the new state and start timer again */
 	        ptimer->param[0] = (new_state<<16) | port;
 	        ptimer_start(&g_zll_timer_table, ptimer, interval);
+			ret = PTIMER_RET_RESTARTED;
     	}
 
 		ssdp_packet[500] = ssdp_packet[100];
@@ -305,7 +311,10 @@ USN: uuid:2f402f80-da50-11e1-9b23-0017881733fb
 		uprintf(UPRINT_DEBUG, UPRINT_BLK_SSDP, "SSDP Tx2: %s\n", &ssdp_packet[100]);
     }
     else
+    {
         uprintf(UPRINT_WARNING, UPRINT_BLK_SSDP, "failed to send SSDP unicast: %d\n", ret);
+		ret = PTIMER_RET_ERROR;
+    }
 
     return ret;
 }
@@ -353,7 +362,7 @@ void ssdp_start_statemachine_multicast(uint32_t destIp, uint32_t destPort, uint1
 	/* ssdp_timer 0 is reserved for multicast */
     if(!ptimer_is_running(&ssdp_timer[0]))
     {
-	    ssdp_timer[0].flags = PTIMER_FLAG_PERIODIC;
+	    ssdp_timer[0].flags = 0;
 		ssdp_timer[0].onexpired_func = ssdp_timeout_multicast;
 	    ssdp_timer[0].param[0] = (SSDP_STATE_00 << 16) | destPort;
 	    ssdp_timer[0].param[1] = destIp;
@@ -371,7 +380,7 @@ void ssdp_start_statemachine_unicast(uint32_t destIp, uint32_t destPort, uint16_
 {
 	int ret, i;
 
-	for(i=1; i<4; i++)
+	for(i=1; i<SSDP_TIMER_MAX_NUM; i++)
 	{
 		if(!ptimer_is_running(&ssdp_timer[i]))
 		{

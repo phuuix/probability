@@ -2,7 +2,7 @@
 
 #include "statemachine.h"
 
-static uint32_t statemachine_default_timeout(ptimer_t *timer, uint32_t param1, uint32_t param2)
+static int32_t statemachine_default_timeout(ptimer_t *timer, uint32_t param1, uint32_t param2)
 {
     statemachine_t * sm = (statemachine_t *)param1;
     statemachine_event_t event;

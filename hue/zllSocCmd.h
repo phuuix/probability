@@ -82,6 +82,7 @@ void zllSocClose( void );
 void zllSocProcessRpc (uint8_t *rpcBuff, uint16_t length);
 
 //ZLL API's
+uint32_t zllSocSendRaw(char *cmbBuff);
 uint32_t zllSocTouchLink(uint8_t *cmbbuf);
 uint32_t zllSocResetToFn(uint8_t *cmbbuf);
 uint32_t zllSocSendResetToFn(uint8_t *cmbbuf);

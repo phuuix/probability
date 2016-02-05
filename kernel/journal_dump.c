@@ -22,7 +22,7 @@ struct dtask
  * work around from host tool crashdump.exe end
  *************************************************/
  
-#include "../../include/journal.h"
+#include "../include/journal.h"
 
 const char *str_task_state[] = {
 	"D",

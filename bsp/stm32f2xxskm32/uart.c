@@ -70,6 +70,8 @@ void uart_init_console(uint32_t port, uint32_t baudrate, uint32_t flowctrl)
 
 	/* Enable the UART Data Register not empty Interrupt */
     __HAL_UART_ENABLE_IT(&UartHandle[port], UART_IT_RXNE);
+	__HAL_UART_ENABLE_IT(&UartHandle[port], UART_IT_PE);
+	__HAL_UART_ENABLE_IT(&UartHandle[port], UART_IT_ERR);
 }
 
 /* CC2530: USART6, GPIOC, TX Pin6, RX Pin7 */
@@ -111,19 +113,21 @@ void uart_init_cc2530(uint32_t port, uint32_t baudrate, uint32_t flowctrl)
 
 	/* Enable the UART Data Register not empty Interrupt */
     __HAL_UART_ENABLE_IT(&UartHandle[port], UART_IT_RXNE);
+	__HAL_UART_ENABLE_IT(&UartHandle[port], UART_IT_PE);
+	__HAL_UART_ENABLE_IT(&UartHandle[port], UART_IT_ERR);
 }
 
 uint16_t uart_getc(uint8_t COM)
 {
 	uint8_t c = 0xEE;
-	int uart_status;
 	uint32_t flags;
+	UART_HandleTypeDef *huart = &UartHandle[COM];
 
 	if(COM < COMn)
 	{
 		flags = bsp_fsave();
-		uart_status = HAL_UART_Receive(&UartHandle[COM], &c, 1, HAL_MAX_DELAY);
-		assert(uart_status == HAL_OK);
+		while(__HAL_UART_GET_FLAG(huart, UART_FLAG_RXNE) == RESET);
+		c = (uint8_t)(huart->Instance->DR & (uint8_t)0x00FF);
 		bsp_frestore(flags);
 	}
 	

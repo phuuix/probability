@@ -199,7 +199,7 @@ void journal_user_defined(uint32_t event_type, uint32_t data)
 void journal_task_create(struct dtask *task)
 {
 	uint32_t tv_sec, tv_usec;
-	struct journal_taskcreate *jevent = (struct journal_taskcreate *)JOURNAL_CLASS1_NEXTRECORD;
+	struct journal_taskcreate *jevent = (struct journal_taskcreate *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
 	jevent->usec = tv_usec/1000;
@@ -219,7 +219,7 @@ void journal_task_create(struct dtask *task)
 void journal_task_exit(struct dtask *task)
 {
     uint32_t tv_sec, tv_usec;
-	struct journal_taskexit *jevent = (struct journal_taskexit *)JOURNAL_CLASS1_NEXTRECORD;
+	struct journal_taskexit *jevent = (struct journal_taskexit *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
 	jevent->usec = tv_usec/1000;
@@ -385,7 +385,7 @@ void journal_dump()
 	}
 
 	kprintf("Class2 journal (index=%d):\n", journal_class2_index);
-	for(idx=0; idx<JOURNAL_CLASS2_MAXRECORD; idx+=2)
+	for(idx=0; idx<JOURNAL_CLASS2_MAXRECORD; idx+=4)
 	{
 		ptr = (uint32_t *)&journal_class2_history[idx];
 		kprintf(" 0x%08x 0x%08x  0x%08x 0x%08x  0x%08x 0x%08x  0x%08x 0x%08x\n", ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5], ptr[6], ptr[7]);

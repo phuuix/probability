@@ -41,15 +41,14 @@ int ptimer_start(ptimer_table_t *table, ptimer_t *timer, uint32_t timeval)
 	uint32_t slot;
 	
 	if(table == NULL || timer == NULL)
-		return -1;
+		return PTIMER_RET_ERROR;
+
+	/* In current design, even a timer is running, it can be restarted again.
+	 * The only requirement is the timer node isn't in the list.
+	 */
+	assert(timer->node.next == NULL);
+	assert(timer->node.prev == NULL);
 	
-	if(timer->flags & PTIMER_FLAG_RUNNING)
-	{
-		/* avoid timer is started multiple times */
-		//ZLOG_WARN("timer is running, ignore it: 0x%p timeval=%d\n", timer, timeval);
-		return -1;
-	}
-		
 	timer->flags |= PTIMER_FLAG_RUNNING;
 	timer->duration = timeval;
 	if(timeval >= table->allslots)
@@ -68,7 +67,7 @@ int ptimer_start(ptimer_table_t *table, ptimer_t *timer, uint32_t timeval)
 	dllist_append(&table->table[slot], (dllist_node_t *)timer);
 	
 //	ZLOG_DEBUG("start timer: 0x%p timeval=%u, curslot=%u target_slot=%u\n", timer, timeval, table->curslot, slot);
-	return 0;
+	return PTIMER_RET_OK;
 }
 
 
@@ -131,9 +130,14 @@ void ptimer_cancel(ptimer_table_t *table, ptimer_t *timer)
 		return;
 		
 //	ZLOG_DEBUG("cancel timer: 0x%p\n", timer);
-	
-	timer->flags &= ~PTIMER_FLAG_RUNNING;
-	dllist_remove(NULL, (dllist_node_t *)timer);
+
+	if(timer->flags & PTIMER_FLAG_RUNNING)
+	{
+		timer->flags &= ~PTIMER_FLAG_RUNNING;
+		dllist_remove(NULL, (dllist_node_t *)timer);
+		timer->node.next = NULL;
+		timer->node.prev = NULL;
+	}
 }
 
 /***********************************************************************************/
@@ -151,7 +155,7 @@ void ptimer_cancel(ptimer_table_t *table, ptimer_t *timer)
 void ptimer_consume_time(ptimer_table_t *table, uint32_t time)
 {
 	ptimer_t *timer;
-	uint32_t i, ret;
+	uint32_t i, ret=PTIMER_RET_OK;
 	
 	if(table == NULL) return;
 	
@@ -162,9 +166,11 @@ void ptimer_consume_time(ptimer_table_t *table, uint32_t time)
 			timer = (ptimer_t *)DLLIST_HEAD(&table->table[table->curslot]);
 
 			assert(ptimer_is_running(timer));
-			
+
 			/* remove all timers in current slot */
 			dllist_remove(NULL, (dllist_node_t *)timer);
+			timer->node.next = NULL;
+			timer->node.prev = NULL;
 			
 			/* handle remainder */
 			if(timer->remainder)
@@ -172,8 +178,8 @@ void ptimer_consume_time(ptimer_table_t *table, uint32_t time)
 				ptimer_start_remainder(table, timer, timer->remainder);
 				continue;
 			}
-						
-			/* call onexpired_func */
+			
+			/* call onexpired_func: the expire function can call ptimer_start again, so timer has to be removed firstly */
 //			ZLOG_DEBUG("timer expired: 0x%p at slot %u\n", timer, table->curslot);
 			if(timer->onexpired_func)
 			{
@@ -181,13 +187,26 @@ void ptimer_consume_time(ptimer_table_t *table, uint32_t time)
 			}
 
 			/* be careful: PTIMER_FLAG_RUNNING flag race here !!! */
-			
-			/* mark timer as not running */
-			timer->flags &= ~PTIMER_FLAG_RUNNING;
-			
-			/* if periodic timer */
-			if((timer->flags & PTIMER_FLAG_PERIODIC) && (ret == 0))
-				ptimer_start(table, timer, timer->duration);
+
+			if(PTIMER_RET_OK == ret)
+			{
+				/* if periodic timer */
+				if(timer->flags & PTIMER_FLAG_PERIODIC)
+				{
+					ptimer_start(table, timer, timer->duration);
+				}
+				else
+				{
+					/* timer normal ends: mark timer as not running */
+					timer->flags &= ~PTIMER_FLAG_RUNNING;
+				}
+			}
+			else if (ret < 0)
+			{
+				/* error occures: mark timer as not running */
+				timer->flags &= ~PTIMER_FLAG_RUNNING;
+			}
+			/* else: timer is restarted, do nothing */
 		}
 		
 		table->curslot = (table->curslot + 1) & (table->allslots - 1);
@@ -211,7 +230,7 @@ int ptimer_init(ptimer_table_t *table, uint16_t allslots)
 	uint16_t vpower = 1;
 	
 	if(table == NULL)
-		return -1;
+		return PTIMER_RET_ERROR;
 	
 	if(allslots > (1<<15))	/* 32768 */
 		vpower = (1<<15);
@@ -236,14 +255,14 @@ int ptimer_init(ptimer_table_t *table, uint16_t allslots)
 		}
 	}
 	
-	return table->table?0:-1;
+	return table->table ? PTIMER_RET_OK : PTIMER_RET_ERROR;
 }
 
 /* allslots must be power of 2 */
 int ptimer_init_nomalloc(ptimer_table_t *table, uint16_t allslots, dllist_node_t *slot)
 {
 	if(table == NULL)
-		return -1;
+		return PTIMER_RET_ERROR;
 	
 	table->table = slot;
 	table->allslots = allslots;
@@ -258,7 +277,7 @@ int ptimer_init_nomalloc(ptimer_table_t *table, uint16_t allslots, dllist_node_t
 		}
 	}
 	
-	return table->table?0:-1;
+	return table->table ? PTIMER_RET_OK : PTIMER_RET_ERROR;
 }
 
 

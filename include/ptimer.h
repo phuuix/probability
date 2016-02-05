@@ -24,8 +24,17 @@
 #define PTIMER_FLAG_RUNNING 0x01
 #define PTIMER_FLAG_PERIODIC 0x02
 
+#define PTIMER_RET_ERROR -1
+#define PTIMER_RET_OK 0
+#define PTIMER_RET_RESTARTED 1
 
-typedef uint32_t (*onexpired_func_t)(void *, uint32_t, uint32_t);
+/* 
+ * param1: ptimer_t *
+ * param2: first parameter
+ * param3: second parameter
+ * the return value of onexpired_func: <0 error, 0 OK, 1 restarted
+ */
+typedef int32_t (*onexpired_func_t)(void *, uint32_t, uint32_t);
 
 /* timer */
 typedef struct ptimer

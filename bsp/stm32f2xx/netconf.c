@@ -155,11 +155,12 @@ void lwip_dhcp_stop(void *pParameter)
 	  /* Stop DHCP */
       dhcp_stop(pNetif);
 
+	  ipaddr = pNetif->ip_addr;
 	  uprintf(UPRINT_INFO, UPRINT_BLK_NET, "LWIP DHCP get IP addr: %d.%d.%d.%d\n", 
-	  		(pNetif->ip_addr.addr&0xFF000000)>>24,
-	  		(pNetif->ip_addr.addr&0x00FF0000)>>16,
-	  		(pNetif->ip_addr.addr&0x0000FF00)>>8,
-	  		(pNetif->ip_addr.addr&0x000000FF));
+	  		((uint8_t *)(&ipaddr.addr))[0],
+	  		((uint8_t *)(&ipaddr.addr))[1],
+	  		((uint8_t *)(&ipaddr.addr))[2],
+	  		((uint8_t *)(&ipaddr.addr))[3]);
 	}
 	else
 	{
@@ -177,10 +178,10 @@ void lwip_dhcp_stop(void *pParameter)
         netif_set_addr(pNetif, &ipaddr , &netmask, &gw);
 
 		uprintf(UPRINT_INFO, UPRINT_BLK_NET, "LWIP DHCP use static IP addr: %d.%d.%d.%d\n", 
-				(pNetif->ip_addr.addr&0xFF000000)>>24,
-		  		(pNetif->ip_addr.addr&0x00FF0000)>>16,
-		  		(pNetif->ip_addr.addr&0x0000FF00)>>8,
-		  		(pNetif->ip_addr.addr&0x000000FF));
+				((uint8_t *)(&ipaddr.addr))[0],
+		  		((uint8_t *)(&ipaddr.addr))[1],
+		  		((uint8_t *)(&ipaddr.addr))[2],
+		  		((uint8_t *)(&ipaddr.addr))[3]);
       }
 	  else
 	  {
