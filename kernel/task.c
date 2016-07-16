@@ -36,9 +36,10 @@ struct dtask *current;				/* current task */
 readyq_t sysready_queue;			/* ready queue */
 static dllist_node_t sysdelay_slot[MAX_TASK_DELAY_NUMBER];
 ptimer_table_t sysdelay_queue;		/* delay task queue */
-uint32_t sysschedule_flags;
+uint32_t sys_schedule_flags;
+uint32_t sys_intdisable_nested;     /* nested interrupt disable value */
+uint32_t sys_active_ints;           /* active interrupts */
 
-static uint32_t active_ints;
 static void (*task_schedule_hook)(struct dtask *, struct dtask *);
 
 extern char _irq_stack_start[];
@@ -56,8 +57,11 @@ void task_set_schedule_hook(void (*hook)(struct dtask *, struct dtask *))
  */
 void sys_interrupt_enter(uint32_t irq)
 {
-	active_ints++;
-
+	sys_active_ints++;
+	
+#ifdef INCLUDE_JOURNAL
+	journal_interrupt(JOURNAL_TYPE_INTERRUPT, irq);
+#endif
 #ifdef INCLUDE_PMCOUNTER
 	PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nInterruptInCurrentTick], 1);
 #endif
@@ -68,18 +72,18 @@ void sys_interrupt_enter(uint32_t irq)
  * this function isn't used if bsp_task_switch==bsp_task_switch_interrupt
  */
 void sys_interrupt_exit(uint32_t irq)
-{
-	uint16_t stack_bottom = *(uint16_t *)_irq_stack_start;
-	
-	active_ints--;
+{	
+	sys_active_ints--;
 
-	assert(stack_bottom == 8995);
-	assert(active_ints == 0);
+	assert((*(uint8_t *)_irq_stack_start) == TASK_STACK_INIT_CHAR);
+
+	/* Probability does't support nested interrupt */
+	assert(sys_active_ints == 0);
 }
 
 uint32_t sys_get_active_int()
 {
-    return active_ints;
+    return sys_active_ints;
 }
 
 /*
@@ -87,7 +91,7 @@ uint32_t sys_get_active_int()
  */
 void task_lock()
 {
-	sysschedule_flags |= SCHEDULE_FLAGS_LOCK;
+	sys_schedule_flags |= SCHEDULE_FLAGS_LOCK;
 }
 
 /*
@@ -95,7 +99,7 @@ void task_lock()
  */
 void task_unlock()
 {
-	sysschedule_flags &= ~SCHEDULE_FLAGS_LOCK;
+	sys_schedule_flags &= ~SCHEDULE_FLAGS_LOCK;
 
 	task_schedule();
 }
@@ -131,7 +135,7 @@ void task_exit()
 
 	struct dtask *task;
 	
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	task = current;
 
 	/* remove task from it's queue */
@@ -145,7 +149,7 @@ void task_exit()
 		task_undelay(TASK_T(task));
 
 	task->state = TASK_STATE_DEAD;
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 
 #ifdef INCLUDE_JOURNAL
 	journal_task_exit(task);
@@ -191,7 +195,7 @@ task_t task_create(char *name, void (*task_func)(void *), void *parm, char *stac
 		return RERROR;
 	
 	/* find an unused task control block */
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	for(i=1; i<MAX_TASK_NUMBER; i++)
 	{
 		if(systask[i].state == TASK_STATE_DEAD)
@@ -202,7 +206,7 @@ task_t task_create(char *name, void (*task_func)(void *), void *parm, char *stac
 			break;
 		}
 	}
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 	if(task == NULL)
 		return RERROR;
 
@@ -240,9 +244,9 @@ task_t task_create(char *name, void (*task_func)(void *), void *parm, char *stac
 	}
 	else
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 		task->state = TASK_STATE_DEAD;
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 		return RERROR;
 	}
 }
@@ -262,24 +266,24 @@ int task_destroy(task_t t)
 
 	task = &systask[t];
 	
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	if(task->critical_regions > 0)
 	{
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 		return -1;
 	}
 	
 	if(task == current)
 	{
 		task_exit();
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 		return 0;
 	}
 	
 	switch(task->state)
 	{
 		case TASK_STATE_DEAD:
-			bsp_frestore(f);
+			SYS_FRESTORE(f);
 			return -1;
 		case TASK_STATE_SUSPEND:
 		case TASK_STATE_READY:
@@ -298,7 +302,7 @@ int task_destroy(task_t t)
 			task->state = TASK_STATE_DEAD;
 			break;
 	}
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 
 	/* free task's stack */
 	if(!(task->flags | TASK_FLAGS_STATICSTACK))
@@ -330,14 +334,14 @@ void task_resume_noschedule(task_t t)
 
 	assert(t<MAX_TASK_NUMBER);
 
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	if(systask[t].state == TASK_STATE_SUSPEND)
 	{
 		assert(systask[t].taskq == NULL);
 		readyq_enqueue(&sysready_queue, &systask[t]);
 	    systask[t].state = TASK_STATE_READY;
 	}
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -356,18 +360,18 @@ int task_suspend(task_t t)
 
 	task = &systask[t];
 
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	/* can't suspend the current task */
 	if(task == current)
 	{
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 		return -1;
 	}
 
 	/* can't suspend the task in critical region */
 	if(task->critical_regions > 0)
 	{
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 		return -1;
 	}
 
@@ -379,7 +383,7 @@ int task_suspend(task_t t)
 
 	task->state = TASK_STATE_SUSPEND;
 
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 	return ROK;
 }
 
@@ -392,10 +396,10 @@ void task_block(blockq_t * tqueue)
 {
 	uint32_t f;
 	
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	task_block_noschedule(tqueue);
 	task_schedule();
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 }
 
 /* task_wakeup_noschedule() must be called in safe context (fsave) */
@@ -420,10 +424,10 @@ void task_block_noschedule(blockq_t * tqueue)
 void task_wakeup(task_t t)
 {
 	uint32_t f;
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	task_wakeup_noschedule(t);
 	task_schedule();
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 }
 
 /* task_wakeup_noschedule() must be called in safe context (fsave) */
@@ -455,7 +459,7 @@ void task_yield()
 	uint32_t f;
 	struct dtask *task;
 
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	task = current;
 	if(task->state == TASK_STATE_READY)
 	{
@@ -464,7 +468,7 @@ void task_yield()
 
 		task_schedule();
 	}
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -487,7 +491,7 @@ int task_setopt(task_t t, uint32_t opt, void* value, size_t size)
 	switch(opt)
 	{
 	case TASK_OPTION_PRIORITY:
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 		task->priority = *((uint8_t*)value);
 		if(task->taskq)
 		{
@@ -501,7 +505,7 @@ int task_setopt(task_t t, uint32_t opt, void* value, size_t size)
 				blockq_enqueue(q, task);
 			}
 		}
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 		break;
 		
 	default:
@@ -518,14 +522,14 @@ void task_schedule()
 	uint32_t f;
 	struct dtask *from, *to;
 	
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 
 	/* when init current is NULL, this time we can't schedule */
 	if(current == NULL)
 		goto sche_end;
 
     /* SCHEDULE_FLAGS_LOCK or SCHEDULE_FLAGS_ONGOING is set */
-    if(sysschedule_flags)
+    if(sys_schedule_flags)
         goto sche_end;
 
 	/* if current task is the task who owns the highest priority */
@@ -559,7 +563,7 @@ void task_schedule()
      */
 	// current = to;
 	
-	if(active_ints)
+	if(sys_active_ints)
 		bsp_task_switch_interrupt((uint32_t)from, (uint32_t)to);
 	else
 		bsp_task_switch((uint32_t)from, (uint32_t)to);
@@ -580,14 +584,14 @@ void task_schedule()
 			/* add mask to t_hold */
 			task->sigctrl.t_hold |= ((1L << (signum-1)) | task->sigctrl.t_action[signum-1].sa_mask);
 			
-			bsp_frestore(f);
+			SYS_FRESTORE(f);
 			/* TODO: enable interrupt */
 			
 			/* call signal handler */
 			if(task->sigctrl.t_action[signum-1].sa_handler)
 				(*(task->sigctrl.t_action[signum-1].sa_handler))(signum);
 
-			f = bsp_fsave();
+			SYS_FSAVE(f);
 
 			/* restore old mask */
 			task->sigctrl.t_hold = old_set;
@@ -596,7 +600,7 @@ void task_schedule()
 #endif /* INCLUDE_SIGNAL */
 
 sche_end:
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -610,7 +614,7 @@ int task_delay(uint32_t tick)
 	uint32_t f;
 	
 	if(tick > 0){
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 		assert(current->t_delay.onexpired_func == task_timeout);
 		assert(current->t_delay.param[0] == TASK_T(current));
 		ret = ptimer_start(&sysdelay_queue, &current->t_delay, tick);
@@ -618,7 +622,7 @@ int task_delay(uint32_t tick)
 			current->flags |= TASK_FLAGS_DELAYING;
 			task_block(NULL);
 		}
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 	}
 	return ret;
 }
@@ -650,7 +654,7 @@ void task_init()
 {
 	uint32_t f;
 
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	
 	/* init system ready task queue */
 	readyq_init(&sysready_queue);
@@ -662,10 +666,10 @@ void task_init()
 	 * even system ready queue is empty */
 	current = NULL;
 
-	sysschedule_flags = 0;
-	active_ints = 0;
+	sys_schedule_flags = 0;
+	sys_active_ints = 0;
 
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 }
 
 

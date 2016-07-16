@@ -28,21 +28,22 @@
  * Journal
  * 
  **********************************************************************/
-#define JOURNAL_CLASS1_MAXRECORD  128
+#define JOURNAL_CLASS1_MAXRECORD  256
 #define JOURNAL_CLASS2_MAXRECORD  16
 
 enum journal_class1_type
 {
-	JOURNAL_TYPE_TASKSWITCH,
-	JOURNAL_TYPE_TIMESTAMP,
-	JOURNAL_TYPE_MBOXPOST,
-	JOURNAL_TYPE_MBOXPEND,
-	JOURNAL_TYPE_SEMPOST,
-	JOURNAL_TYPE_SEMPEND,
-	JOURNAL_TYPE_MTXPOST,
-	JOURNAL_TYPE_MTXPEND,
-	JOURNAL_TYPE_MSGQPOST,
-	JOURNAL_TYPE_MSGQPEND,  // 9
+	JOURNAL_TYPE_TASKSWITCH,  // 00
+	JOURNAL_TYPE_TIMESTAMP,   // 01
+	JOURNAL_TYPE_IPCPOST,     // 02
+	JOURNAL_TYPE_IPCPEND,     // 03
+	JOURNAL_TYPE_IRQENABLE,   // 04
+	JOURNAL_TYPE_IRQDISABLE,  // 05
+	JOURNAL_TYPE_INTERRUPT,   // 06
+	JOURNAL_TYPE_FUNCTIONIN,  // 07: for profiling
+	JOURNAL_TYPE_FUNCTIONOUT, // 08: profiling
+	JOURNAL_TYPE_CONTINUE,    // 09: to hold more information
+	JOURNAL_TYPE_USER,        // 10:
 	JOURNAL_TYPE_CLASS1MAX
 };
 
@@ -50,14 +51,8 @@ enum journal_class2_type
 {
 	JOURNAL_TYPE_TASKCREATE,
 	JOURNAL_TYPE_TASKEXIT,
-	JOURNAL_TYPE_MBOXINIT,
-	JOURNAL_TYPE_MBOXDESTROY,
-	JOURNAL_TYPE_SEMINIT,
-	JOURNAL_TYPE_SEMDESTROY,
-	JOURNAL_TYPE_MTXINIT,
-	JOURNAL_TYPE_MTXDESTROY,
-	JOURNAL_TYPE_MSGQINIT,
-	JOURNAL_TYPE_MSGQDESTROY,
+	JOURNAL_TYPE_IPCINIT,
+	JOURNAL_TYPE_IPCDESTROY,
 	JOURNAL_TYPE_CLASS2MAX
 };
 
@@ -75,57 +70,56 @@ struct journal_taskswitch
 	uint32_t filler:14;
 };
 
-struct journal_mboxpost
+struct journal_ipcpost
 {
 	uint32_t usec:20;           // 20 bits can hold 1 second duration
 	uint32_t t_current:8;
 	uint32_t jtype:4;
 
-	uint32_t t_ipc:8;        	// parent of ipc
-	uint32_t t_wakeup:8;        // task to wakeup (valid if is_wakeup==true)
-	uint32_t is_interrupt:1;
-	uint32_t is_wakeup:1;
-	uint32_t filler:14;
+	uint32_t subtype:2;         // IPC type - 1
+	uint32_t t_ipc:8;           // the task who create the ipc
+	uint32_t t_wakeup:8;        // the task to be waken up, 0 means no wakeup
+	uint32_t is_interrupt:1;    // is in interrupt?
+	// for mbox and msgq, ipcvalue is length of data in queue
+	// for sem, ipcvalue is semaphore's value
+	// for mtx, ipcvalue is mutex's value (8 bits) + holdtimes (5 bits)
+	uint32_t ipcvalue:13;       
 };
 
-struct journal_mboxpend
+struct journal_ipcpend
 {
 	uint32_t usec:20;           // 20 bits can hold 1 second duration
 	uint32_t t_current:8;
 	uint32_t jtype:4;
 
-	uint32_t t_ipc:8;           // parent of ipc
-	uint32_t filler:8;       
-	uint32_t is_interrupt:1;
-	uint32_t timeout:15;
+	uint32_t subtype:2;         // IPC type - 1
+	uint32_t t_ipc:8;           // the task who create the ipc
+	uint32_t filler:5;          // 
+	uint32_t is_interrupt:1;    // is in interrupt?
+	uint32_t timeout:16;
 };
 
-struct journal_sempost
+struct journal_int
 {
 	uint32_t usec:20;           // 20 bits can hold 1 second duration
 	uint32_t t_current:8;
 	uint32_t jtype:4;
 
-	uint32_t t_ipc:8;           // parent of ipc
-	uint32_t t_wakeup:8;        // task to wakeup (valid if is_wakeup==true)
-	uint32_t semvalue:8;
-	uint32_t is_interrupt:1;
-	uint32_t is_wakeup:1;
-	uint32_t filler:6;
+	uint32_t filler:16;
+	// for interrupt, value is irqno
+	// for irqdisable and irqenable, value is 0
+	uint32_t value:16;
 };
 
-struct journal_sempend
+struct journal_profile
 {
 	uint32_t usec:20;           // 20 bits can hold 1 second duration
 	uint32_t t_current:8;
 	uint32_t jtype:4;
 
-	uint32_t t_ipc:8;           // parent of ipc
-	uint32_t semvalue:8;       
-	uint32_t is_interrupt:1;
-	uint32_t timeout:15;
+	uint32_t subtype:1;         // entry(0), exit(1)
+	uint32_t func:31;
 };
-
 
 /* record the time event for every one second */
 struct journal_time
@@ -172,89 +166,29 @@ struct journal_taskexit
 	uint32_t filler:18;
 };
 
-struct journal_mboxinit
+struct journal_ipcinit
 {
 	uint32_t usec:20;           // 20 bits can hold 1 second duration
 	uint32_t t_current:8;
 	uint32_t jtype:4;
-	
-	uint32_t usize:16;
-	uint32_t unum:16;
+
+	uint32_t subtype:2;         // IPC type - 1
+	uint32_t filler:14;
+	uint32_t value:16;
 };
 
-struct journal_mboxdestroy
+struct journal_ipcdestroy
 {
 	uint32_t usec:20;           // 20 bits can hold 1 second duration
 	uint32_t t_current:8;
 	uint32_t jtype:4;
 
+	uint32_t subtype:2;         // IPC type - 1
 	uint32_t is_wakeup:1;
 	uint32_t is_freedata:1;
-	uint32_t filler:30;
+	uint32_t filler:12;
+	uint32_t value:16;
 };
-
-struct journal_seminit
-{
-	uint32_t usec:20;           // 20 bits can hold 1 second duration
-	uint32_t t_current:8;
-	uint32_t jtype:4;
-	
-	uint32_t value;             // value of semaphore
-};
-
-struct journal_semdestroy
-{
-	uint32_t usec:20;           // 20 bits can hold 1 second duration
-	uint32_t t_current:8;
-	uint32_t jtype:4;
-
-	uint32_t is_wakeup:1;
-	uint32_t value:7;
-	uint32_t filler:24;
-};
-
-struct journal_mtxinit
-{
-	uint32_t usec:20;           // 20 bits can hold 1 second duration
-	uint32_t t_current:8;
-	uint32_t jtype:4;
-	
-	uint32_t value:16;          // value of semaphore
-	uint32_t filler:16;
-};
-
-struct journal_mtxdestroy
-{
-	uint32_t usec:20;           // 20 bits can hold 1 second duration
-	uint32_t t_current:8;
-	uint32_t jtype:4;
-
-	uint32_t is_wakeup:1;
-	uint32_t holdtimes:7;
-	uint32_t value:24;
-};
-
-struct journal_msgqinit
-{
-	uint32_t usec:20;           // 20 bits can hold 1 second duration
-	uint32_t t_current:8;
-	uint32_t jtype:4;
-	
-	uint32_t size:16;             // size of messageq
-	uint32_t filler:16;
-};
-
-struct journal_msgqdestroy
-{
-	uint32_t usec:20;           // 20 bits can hold 1 second duration
-	uint32_t t_current:8;
-	uint32_t jtype:4;
-
-	uint32_t is_wakeup:1;
-	uint32_t value:7;
-	uint32_t filler:24;
-};
-
 
 typedef struct journal_class2
 {
@@ -272,22 +206,13 @@ void journal_memory_free(uint32_t size, void *data, char *file, uint32_t line, t
 void journal_task_switch(struct dtask *from, struct dtask *to);
 void journal_timestamp();
 void journal_user_defined(uint32_t event_type, uint32_t data);
-void journal_mbox_pend(mbox_t *mbox, int timeout);
-void journal_mbox_post(mbox_t *mbox, dtask_t *task);
-void journal_sem_pend(sem_t *sem, int timeout);
-void journal_sem_post(sem_t *sem, dtask_t *task);
-
+void journal_ipc_pend(ipc_t *mbox, int timeout);
+void journal_ipc_post(ipc_t *mbox, dtask_t *task);
+void journal_interrupt(int type, int value);
 void journal_task_create(struct dtask *task);
 void journal_task_exit(struct dtask *task);
-void journal_mbox_init(mbox_t *mbox, uint16_t usize, uint16_t unum);
-void journal_mbox_destroy(mbox_t *mbox);
-void journal_sem_init(sem_t *sem);
-void journal_sem_destroy(sem_t *sem);
-void journal_mtx_init(mtx_t *mtx);
-void journal_mtx_destroy(mtx_t *mtx);
-void journal_msgq_init(msgq_t *msgq, uint16_t size);
-void journal_msgq_destroy(msgq_t *msgq);
-
+void journal_ipc_init(ipc_t *ipc);
+void journal_ipc_destroy(ipc_t *ipc);
 
 void journal_dump();
 
@@ -327,13 +252,6 @@ enum
 	PMC_U32_nsAvgJitterTick,		// average jitter in ns between one tick
 	PMC_U32_nsMaxInterruptResp,		// max interrupt response time in ns
 	PMC_U32_nsAvgInterruptResp,		// average interrupt response time in ns
-
-#if 0
-	/* not available yet */
-	PMC_U64_nDCacheMiss,
-	PMC_U64_nICacheMiss,
-	PMC_U32_nInstructionInLastTick,
-#endif
 	
 	PMC_U32_nSysmax
 };

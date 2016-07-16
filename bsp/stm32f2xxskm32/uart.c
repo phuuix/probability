@@ -125,10 +125,10 @@ uint16_t uart_getc(uint8_t COM)
 
 	if(COM < COMn)
 	{
-		flags = bsp_fsave();
+		SYS_FSAVE(flags);
 		while(__HAL_UART_GET_FLAG(huart, UART_FLAG_RXNE) == RESET);
 		c = (uint8_t)(huart->Instance->DR & (uint8_t)0x00FF);
-		bsp_frestore(flags);
+		SYS_FRESTORE(flags);
 	}
 	
 

@@ -83,17 +83,18 @@ void journal_task_switch(struct dtask *from, struct dtask *to)
 	JOURNAL_CLASS1_UPDATENEXT();
 }
 
-void journal_mbox_pend(mbox_t *mbox, int timeout)
+void journal_ipc_pend(ipc_t *ipc, int timeout)
 {
 	uint32_t tv_sec, tv_usec;
-	struct journal_mboxpend *jevent = (struct journal_mboxpend *)JOURNAL_CLASS1_NEXTRECORD;
+	struct journal_ipcpend *jevent = (struct journal_ipcpend *)JOURNAL_CLASS1_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
 	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_MBOXPEND;
+	jevent->jtype = JOURNAL_TYPE_IPCPEND;
 
-	jevent->t_ipc = mbox->t_parent;
+	jevent->subtype = ipc->type-1;
+	jevent->t_ipc = ipc->t_parent;
 	jevent->filler = 0;
 	jevent->is_interrupt = (sys_get_active_int()>0);
 	jevent->timeout = timeout;
@@ -101,59 +102,38 @@ void journal_mbox_pend(mbox_t *mbox, int timeout)
 	JOURNAL_CLASS1_UPDATENEXT();
 }
 
-void journal_mbox_post(mbox_t *mbox, dtask_t *task)
+void journal_ipc_post(ipc_t *ipc, dtask_t *task)
 {
 	uint32_t tv_sec, tv_usec;
-	struct journal_mboxpost *jevent = (struct journal_mboxpost *)JOURNAL_CLASS1_NEXTRECORD;
+	struct journal_ipcpost *jevent = (struct journal_ipcpost *)JOURNAL_CLASS1_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
 	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_MBOXPOST;
+	jevent->jtype = JOURNAL_TYPE_IPCPOST;
 
-	jevent->t_ipc = mbox->t_parent;
+	jevent->subtype = ipc->type-1;
+	jevent->t_ipc = ipc->t_parent;
 	jevent->t_wakeup = (task == NULL)?0:TASK_T(task);
 	jevent->is_interrupt = (sys_get_active_int()>0);
-	jevent->is_wakeup = (task != NULL);
-	jevent->filler = 0;
-
-	JOURNAL_CLASS1_UPDATENEXT();
-}
-
-void journal_sem_pend(sem_t *sem, int timeout)
-{
-	uint32_t tv_sec, tv_usec;
-	struct journal_sempend *jevent = (struct journal_sempend *)JOURNAL_CLASS1_NEXTRECORD;
-
-	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec;
-	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_SEMPEND;
-
-	jevent->t_ipc = sem->t_parent;
-	jevent->semvalue = sem->value;
-	jevent->is_interrupt = (sys_get_active_int()>0);
-	jevent->timeout = timeout;
-
-	JOURNAL_CLASS1_UPDATENEXT();
-}
-
-void journal_sem_post(sem_t *sem, dtask_t *task)
-{
-    uint32_t tv_sec, tv_usec;
-	struct journal_sempost *jevent = (struct journal_sempost *)JOURNAL_CLASS1_NEXTRECORD;
-
-	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec;
-	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_SEMPOST;
+	switch(ipc->type)
+	{
+		case IPC_TYPE_MBOX:
+			jevent->ipcvalue = (((mbox_t *)ipc)->buf.len - ((mbox_t *)ipc)->buf.vlen);
+			break;
+		case IPC_TYPE_MSGQ:
+			jevent->ipcvalue = (((msgq_t *)ipc)->buf.len - ((msgq_t *)ipc)->buf.vlen);
+			break;
+		case IPC_TYPE_SEMAPHORE:
+			jevent->ipcvalue = ((sem_t *)ipc)->value;
+			break;
+		case IPC_TYPE_MUTEX:
+			jevent->ipcvalue = ((mtx_t *)ipc)->value;
+			break;
+		default:
+			jevent->ipcvalue = 0;
+	}
 	
-	jevent->t_ipc = sem->t_parent;
-	jevent->t_wakeup = (task == NULL)?0:TASK_T(task);
-	jevent->semvalue = sem->value;
-	jevent->is_interrupt = (sys_get_active_int()>0);
-	jevent->is_wakeup = (task != NULL);
-	jevent->filler = 0;
 
 	JOURNAL_CLASS1_UPDATENEXT();
 }
@@ -174,13 +154,27 @@ void journal_timestamp()
     JOURNAL_CLASS1_UPDATENEXT();
 }
 
+void journal_interrupt(int type, int value)
+{
+	uint32_t tv_sec, tv_usec;
+	struct journal_int *jevent = (struct journal_int *)JOURNAL_CLASS1_NEXTRECORD;
+
+	bsp_gettime(&tv_sec, &tv_usec);
+	jevent->usec = tv_usec;
+	jevent->t_current = TASK_T(current);
+	jevent->jtype = type;
+
+	jevent->filler = 0;
+	jevent->value = value;
+
+    JOURNAL_CLASS1_UPDATENEXT();
+}
+
 void journal_user_defined(uint32_t event_type, uint32_t data)
 {
-	uint32_t flags;
     uint32_t tv_sec, tv_usec;
 	struct journal_class1 *jevent = (struct journal_class1 *)JOURNAL_CLASS1_NEXTRECORD;
 
-	flags = bsp_fsave();
 	bsp_gettime(&tv_sec, &tv_usec);
 	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
@@ -189,8 +183,6 @@ void journal_user_defined(uint32_t event_type, uint32_t data)
     jevent->data = data;
 
     JOURNAL_CLASS1_UPDATENEXT();
-
-    bsp_frestore(flags);
 }
 
 /**************************************************************************
@@ -235,138 +227,72 @@ void journal_task_exit(struct dtask *task)
 	JOURNAL_CLASS2_UPDATENEXT();
 }
 
-void journal_mbox_init(mbox_t *mbox, uint16_t usize, uint16_t unum)
+void journal_ipc_init(ipc_t *ipc)
 {
 	uint32_t tv_sec, tv_usec;
-	struct journal_mboxinit *jevent = (struct journal_mboxinit *)JOURNAL_CLASS2_NEXTRECORD;
+	struct journal_ipcinit *jevent = (struct journal_ipcinit *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
 	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_MBOXINIT;
+	jevent->jtype = JOURNAL_TYPE_IPCINIT;
 
-	jevent->usize = usize;
-	jevent->unum = unum;
+	jevent->subtype = ipc->type-1;
+	jevent->filler = 0;
+	switch(ipc->type)
+	{
+	case IPC_TYPE_MBOX:
+		jevent->value = ((mbox_t *)ipc)->buf.vlen;
+		break;
+	case IPC_TYPE_MSGQ:
+		jevent->value = ((msgq_t *)ipc)->buf.vlen;
+		break;
+	case IPC_TYPE_SEMAPHORE:
+		jevent->value = ((sem_t *)ipc)->value;
+		break;
+	case IPC_TYPE_MUTEX:
+		jevent->value = ((sem_t *)ipc)->value;
+		break;
+	}
 	
 	JOURNAL_CLASS2_UPDATENEXT();
 }
 
-void journal_mbox_destroy(mbox_t *mbox)
+void journal_ipc_destroy(ipc_t *ipc)
 {
 	uint32_t tv_sec, tv_usec;
-	struct journal_mboxdestroy *jevent = (struct journal_mboxdestroy *)JOURNAL_CLASS2_NEXTRECORD;
+	struct journal_ipcdestroy *jevent = (struct journal_ipcdestroy *)JOURNAL_CLASS2_NEXTRECORD;
 
 	bsp_gettime(&tv_sec, &tv_usec);
 	jevent->usec = tv_usec;
 	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_MBOXDESTROY;
+	jevent->jtype = JOURNAL_TYPE_IPCDESTROY;
 
-	jevent->is_wakeup = !DLLIST_EMPTY(&(mbox->taskq));
-	jevent->is_freedata = mbox->flag & IPC_FLAG_FREEMEM;
+	jevent->subtype = ipc->type-1;
+	jevent->is_wakeup = !DLLIST_EMPTY(&(ipc->taskq));
+	jevent->is_freedata = ipc->flag & IPC_FLAG_FREEMEM;
 	jevent->filler = 0;
 	
-	JOURNAL_CLASS2_UPDATENEXT();
-}
-
-
-void journal_sem_init(sem_t *sem)
-{
-    uint32_t tv_sec, tv_usec;
-	struct journal_seminit *jevent = (struct journal_seminit *)JOURNAL_CLASS2_NEXTRECORD;
-
-	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec;
-	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_SEMINIT;
-
-	jevent->value = sem->value;
+	switch(ipc->type)
+	{
+	case IPC_TYPE_MBOX:
+		jevent->value = ((mbox_t *)ipc)->buf.vlen;
+		break;
+	case IPC_TYPE_MSGQ:
+		jevent->value = ((msgq_t *)ipc)->buf.vlen;
+		break;
+	case IPC_TYPE_SEMAPHORE:
+		jevent->value = ((sem_t *)ipc)->value;
+		break;
+	case IPC_TYPE_MUTEX:
+		jevent->value = ((sem_t *)ipc)->value;
+		break;
+	}
 	
 	JOURNAL_CLASS2_UPDATENEXT();
 }
 
-void journal_sem_destroy(sem_t *sem)
-{
-	uint32_t tv_sec, tv_usec;
-	struct journal_semdestroy *jevent = (struct journal_semdestroy *)JOURNAL_CLASS2_NEXTRECORD;
-
-	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec;
-	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_SEMDESTROY;
-
-	jevent->is_wakeup = (sem->tasks);
-	jevent->value = sem->value;
-	jevent->filler = 0;
-	
-	JOURNAL_CLASS2_UPDATENEXT();
-}
-
-void journal_mtx_init(mtx_t *mtx)
-{
-    uint32_t tv_sec, tv_usec;
-	struct journal_mtxinit *jevent = (struct journal_mtxinit *)JOURNAL_CLASS2_NEXTRECORD;
-
-	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec;
-	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_MTXINIT;
-
-	jevent->value = mtx->value;
-	jevent->filler = 0;
-	
-	JOURNAL_CLASS2_UPDATENEXT();
-}
-
-void journal_mtx_destroy(mtx_t *mtx)
-{
-	uint32_t tv_sec, tv_usec;
-	struct journal_mtxdestroy *jevent = (struct journal_mtxdestroy *)JOURNAL_CLASS2_NEXTRECORD;
-
-	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec;
-	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_MTXDESTROY;
-
-	jevent->is_wakeup = (mtx->tasks);
-	jevent->holdtimes = mtx->holdtimes;
-	jevent->value = mtx->value;
-	
-	JOURNAL_CLASS2_UPDATENEXT();
-}
-
-void journal_msgq_init(msgq_t *msgq, uint16_t size)
-{
-    uint32_t tv_sec, tv_usec;
-	struct journal_msgqinit *jevent = (struct journal_msgqinit *)JOURNAL_CLASS2_NEXTRECORD;
-
-	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec;
-	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_MSGQINIT;
-
-	jevent->size = size;
-	jevent->filler = 0;
-	
-	JOURNAL_CLASS2_UPDATENEXT();
-}
-
-void journal_msgq_destroy(msgq_t *msgq)
-{
-	uint32_t tv_sec, tv_usec;
-	struct journal_msgqdestroy *jevent = (struct journal_msgqdestroy *)JOURNAL_CLASS2_NEXTRECORD;
-
-	bsp_gettime(&tv_sec, &tv_usec);
-	jevent->usec = tv_usec;
-	jevent->t_current = TASK_T(current);
-	jevent->jtype = JOURNAL_TYPE_MSGQDESTROY;
-
-	jevent->is_wakeup = !DLLIST_EMPTY(&(msgq->taskq));
-	jevent->value = 0;
-	jevent->filler = 0;
-	
-	JOURNAL_CLASS2_UPDATENEXT();
-}
-
+const char *journal_type_str[] = {"TS", "TM", "PT", "PD", "IE", "ID", "IT", "FI", "FO", "CC", "US"};
 /* 
  * dump journal information 
  * We use kprintf instead of uprintf in journal_dump() because it will be called in crash dump
@@ -389,6 +315,15 @@ void journal_dump()
 	{
 		ptr = (uint32_t *)&journal_class2_history[idx];
 		kprintf(" 0x%08x 0x%08x  0x%08x 0x%08x  0x%08x 0x%08x  0x%08x 0x%08x\n", ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5], ptr[6], ptr[7]);
+	}
+
+	for(idx=0; idx<JOURNAL_CLASS1_MAXRECORD; idx++)
+	{
+		journal_class1_t *jptr;
+
+		jptr = (journal_class1_t *)&journal_class1_history[idx];
+		kprintf("us: %08d %8s %s data: %08x %08x\n", jptr->usec, systask[jptr->t_current].name, journal_type_str[jptr->jtype], 
+				*(uint32_t *)&journal_class1_history[idx], jptr->data);
 	}
 }
 #endif // INCLUDE_JOURNAL

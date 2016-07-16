@@ -62,7 +62,7 @@ uint32_t bsp_udelay_init()
 	uint32_t flags, n;
 	uint32_t tv_usec_old, tv_usec_new;
 
-	flags = bsp_fsave();
+	SYS_FSAVE(flags);
 
 	tv_usec_old = __HAL_TIM_GET_COUNTER(&TimHandle);
 
@@ -76,7 +76,7 @@ uint32_t bsp_udelay_init()
 		loops_per_us = N_LOOPS_UDELAY/(tv_usec_new - tv_usec_old);
 	else
 		loops_per_us = N_LOOPS_UDELAY/(tv_usec_new + N_MILLION - tv_usec_old);
-	bsp_frestore(flags);
+	SYS_FRESTORE(flags);
 	
 	return loops_per_us;
 }
@@ -327,7 +327,7 @@ void isr_default_handler()
 	ISR_FUNC  isr;
 	uint32_t f;
 
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	int_id = get_psr();
 
 	sys_interrupt_enter(int_id);
@@ -345,7 +345,7 @@ void isr_default_handler()
 	}
 
 	sys_interrupt_exit(int_id);
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 }
 
 
@@ -382,13 +382,14 @@ void dump_call_stack(uint32_t fp, uint32_t low, uint32_t high)
 void panic(char *infostr)
 {
 	uint32_t sp, fp, psr;
-	uint32_t size, i;
-	bsp_fsave();
+	uint32_t size, i, f;
+	
+	SYS_FSAVE(f);
 	
     psr = get_psr();
     fp = get_fp();
 
-	kprintf("PANIC psr=0x%08x fp=0x%08x: %s\n", psr, fp, infostr);
+	kprintf("PANIC psr=0x%08x fp=0x%08x flag=0x%08x: %s\n", psr, fp, f, infostr);
 
 	if(get_psr() & 0xFF){
 		/* in exception context, dump exception stack */

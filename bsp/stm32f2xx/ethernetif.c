@@ -74,7 +74,6 @@ ETH_HandleTypeDef EthHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 static void ethernetif_input( void const * argument );
-extern void udelay(uint32_t us);
 
 /* Private functions ---------------------------------------------------------*/
 /*******************************************************************************
@@ -130,9 +129,9 @@ void HAL_ETH_MspInit(ETH_HandleTypeDef *heth)
   
   /* reset phy: For a complete reset function, the reset pin must be asserted low for at least 10ms. */
   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
-  udelay(20000);
+  bsp_udelay(20000);
   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);
-  udelay(1000);
+  bsp_udelay(1000);
   
   // init GPIO structure
   GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;

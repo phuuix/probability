@@ -406,7 +406,7 @@ static int http_serv_put(struct netconn *conn, http_parser_t *http_parser, char 
                 cJSON *json_x, *json_y;
 
                 json_x = cJSON_GetArrayItem(json_state, 0);
-                json_y = cJSON_GetArrayItem(json_state, 0);
+                json_y = cJSON_GetArrayItem(json_state, 1);
                 if(json_x && json_y)
                 {
                     bitmap |= (1<<HUE_STATE_BIT_XY);

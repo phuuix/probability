@@ -47,11 +47,11 @@ int kprintf(char *fmt,...)
 	int result;
 	uint32_t f;
 
-	f = bsp_fsave(); // prevent from interruption
+	SYS_FSAVE(f); // prevent from interruption
 	va_start(parms,fmt);
 	result = doiprintf(&kprintdev,fmt,parms);
 	va_end(parms);
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 
 	return(result);
 }

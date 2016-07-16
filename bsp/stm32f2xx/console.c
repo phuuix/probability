@@ -26,6 +26,7 @@
 #include "cli.h"
 #include "stm32f2xx.h"
 #include "stm32f2xx_hal.h"
+#include "journal.h"
 
 int getline(char *buf, int len);
 
@@ -45,7 +46,7 @@ static void serial_isr_func(int n)
 	UART_HandleTypeDef *huart = &UartHandle[SERIAL_UART_PORT];
 	uint32_t buf[16];
 	uint32_t nBytes = 0;
-
+	
 	if(huart->Instance->SR & (UART_FLAG_PE | UART_FLAG_FE | UART_FLAG_NE | UART_FLAG_ORE))
 	{
 		__HAL_UART_CLEAR_OREFLAG(huart);
@@ -102,7 +103,7 @@ char getcharacter()
 	uint32_t e = 0;
 	
 	mbox_pend(&console_mbox, &e, TIME_WAIT_FOREVER);
-
+	
 	return e;
 }
 

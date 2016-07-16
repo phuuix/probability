@@ -84,9 +84,9 @@ static void uprintf_task(void *p)
 	
 	for(;;)
 	{
-		flags = bsp_fsave();
+		SYS_FSAVE(flags);
 		uprintf_buf_rdpt_local = uprintf_buf_rdpt;
-		bsp_frestore(flags);
+		SYS_FRESTORE(flags);
 
 		if(uprintf_bufstat[uprintf_buf_rdpt_local] == UPRINTF_BUFSTAT_IDLE)
 		{
@@ -109,14 +109,14 @@ static void uprintf_task(void *p)
 			}
 
 			
-			flags = bsp_fsave();
+			SYS_FSAVE(flags);
 			if(uprintf_buf_rdpt_local == uprintf_buf_rdpt)
 			{
 				// uprintf_buf_rdpt isn't changed by vuprintf()
 				uprintf_bufstat[uprintf_buf_rdpt_local] = UPRINTF_BUFSTAT_IDLE;
 				uprintf_buf_rdpt = (uprintf_buf_rdpt+1)&(UPRINTF_BUFNUM-1);
 			}
-			bsp_frestore(flags);
+			SYS_FRESTORE(flags);
 		}
 	}
 }
@@ -192,7 +192,7 @@ int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms)
 	}
 		
 	/* get buffer ptr for print and update write buffer ptr */
-	flags = bsp_fsave();
+	SYS_FSAVE(flags);
 	uprintf_buf_wtpt_local = uprintf_buf_wtpt;
 	uprintf_buf_wtpt = (uprintf_buf_wtpt+1) & (UPRINTF_BUFNUM-1);  
 	prtbuf = uprintf_buffer[uprintf_buf_wtpt_local];
@@ -205,7 +205,7 @@ int vuprintf(uint8_t level, uint8_t block_id, char *fmt, va_list parms)
 		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nUprintOverwriten],1);
 #endif
 	}
-	bsp_frestore(flags);
+	SYS_FRESTORE(flags);
 	
 	sprintdev.internal = prtbuf;
 	sprintdev.limit = UPRINTF_BUFSIZE-1;

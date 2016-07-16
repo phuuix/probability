@@ -207,7 +207,10 @@ int zllctrl_write(int zll_fd, uint8_t *cmd, uint16_t cmd_len)
  *
  * @param   none
  *
- * @return  none
+ * @examples
+ *    % send a IEEE addr req for short addr 0x02
+ *    # z sendraw 0xfe0425010200000000
+ * @return  length of packet
  */
 uint32_t zllSocSendRaw(char *cmbBuff)
 {
@@ -1514,7 +1517,8 @@ uint32_t zllSocUtilGetDevInfo(uint8_t *cmbbuf)
  *************************************************************************************************/
 static void processRpcSysAppTlInd(uint8_t *TlIndBuff)
 {
-  epInfo_t epInfo;    
+  epInfo_t epInfo;
+  uint8_t addrMode;
     
   epInfo.nwkAddr = BUILD_UINT16(TlIndBuff[0], TlIndBuff[1]);
   TlIndBuff+=2;      
@@ -1524,7 +1528,14 @@ static void processRpcSysAppTlInd(uint8_t *TlIndBuff)
   epInfo.deviceID = BUILD_UINT16(TlIndBuff[0], TlIndBuff[1]);
   TlIndBuff+=2;   
   epInfo.version = *TlIndBuff++;
-  epInfo.status = *TlIndBuff++;
+  epInfo.status = 0; //*TlIndBuff++;
+
+  /* we have extended the TL indication to bring back the IEER addr info */
+  addrMode = *TlIndBuff++;  
+  if(addrMode == afAddr64Bit)
+  {
+  	memcpy(epInfo.IEEEAddr, TlIndBuff, 8);
+  }
   
   zllctrl_process_touchlink_indication(&epInfo);
 }        
@@ -1758,19 +1769,17 @@ static void processRpcSysDbg(uint8_t *rpcBuff)
 
 static void processRpcSysZdo(uint8_t *rpcBuff)
 {
-  uint8_t status;
+  uint8_t status, cmd1;
   uint16_t addr;
-  uint8_t startIdx;
   hue_light_t *light;
 	
-  // rpcBuff[1]: cmd1
-  if(rpcBuff[1] == MT_ZDO_END_DEVICE_ANNCE_IND) 
+  cmd1 = rpcBuff[1];
+  if(cmd1 == MT_ZDO_END_DEVICE_ANNCE_IND) 
   {
   	addr = *(uint16_t *)&rpcBuff[4];
   	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: device announce ind, srcAddr=0x%x nwkAddr=0x%x IEEEAddr=0x%08x%08x\n", 
         *(uint16_t *)&rpcBuff[2], addr, *(uint32_t *)&rpcBuff[6], *(uint32_t *)&rpcBuff[10]);
-    // TODO: to fetch this device's info
-#if 1
+
     /* add the new device to light list... 
      * FIXME: just assuem this is a light */
     light = zllctrl_find_light_by_ieeeaddr(&rpcBuff[6]);
@@ -1779,6 +1788,7 @@ static void processRpcSysZdo(uint8_t *rpcBuff)
       if(gNumHueLight < HUE_MAX_LIGHTS)
       {
         light = &gHueLight[gNumHueLight++];
+		uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: new light announced\n");
       }
     }
 
@@ -1788,14 +1798,25 @@ static void processRpcSysZdo(uint8_t *rpcBuff)
       light->ep_info.nwkAddr = BUILD_UINT16(rpcBuff[4], rpcBuff[5]);
       memcpy(light->ep_info.IEEEAddr, &rpcBuff[6], 8);
     }
-#endif
   }
-  else if(rpcBuff[1] == MT_ZDO_IEEE_ADDR_RSP)
+  else if(cmd1 == MT_ZDO_IEEE_ADDR_RSP)
   {
   	status = rpcBuff[2];
 	addr = *(uint16_t *)&rpcBuff[11];
-	startIdx = rpcBuff[12];
-  	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: IEEE addr rsp, status=%d nwkAddr=0x%x startIdx=%d\n", status, addr, startIdx);
+  	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: IEEE addr rsp, status=%d nwkAddr=0x%x IEEEAddr=%d\n", 
+			status, addr, *(uint32_t *)&rpcBuff[3], *(uint32_t *)&rpcBuff[7]);
+  }
+  else if(cmd1 == MT_ZDO_ACTIVE_EP_RSP)
+  {
+    addr = *(uint16_t *)&rpcBuff[2];
+	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: Active EP rsp, srcAddr=0x%x ActiveEPCount=%d EP=0x%x\n", 
+        addr, rpcBuff[7], *(uint32_t *)&rpcBuff[8]);
+  }
+  else if(cmd1 == MT_ZDO_SIMPLE_DESC_RSP)
+  {
+    addr = *(uint16_t *)&rpcBuff[2];
+	uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "processRpcSysZDO: Simple Desc rsp, srcAddr=0x%x EP=%d ProfileId=0x%04x DeviceId=0x%04x more=0x%x\n", 
+        addr, rpcBuff[8], *(uint16_t *)&rpcBuff[9], *(uint16_t *)&rpcBuff[11], *(uint32_t *)&rpcBuff[12]);
   }
 }
 

@@ -43,7 +43,7 @@ static void timer_handler()
 	struct dtask *task;
 
 	/* we have to disable interrupt for stm32's nest interrupt */
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	
 	/* update timing
 	 *  Warning: if interrupt is disabled over 10ms, then we will loss tick and cause some time (sync) issues.
@@ -94,7 +94,7 @@ static void timer_handler()
 	}
 	task_schedule();
 	
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 }
 
 

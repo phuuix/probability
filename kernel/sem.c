@@ -44,7 +44,7 @@ int sem_initialize(sem_t *sem, int value)
 	{
 		uint32_t f;
 
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 
 		sem->t_parent = TASK_T(current);
 		sem->type = IPC_TYPE_SEMAPHORE;
@@ -53,14 +53,14 @@ int sem_initialize(sem_t *sem, int value)
 		sem->flag = IPC_FLAG_VALID;
 
 #ifdef INCLUDE_JOURNAL
-		journal_sem_init(sem);
+		journal_ipc_init((ipc_t *)sem);
 #endif
 					
 #ifdef INCLUDE_PMCOUNTER
 		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nSemaphore], 1);
 #endif
 
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 
 		return ROK;
 	}
@@ -80,10 +80,10 @@ void sem_destroy(sem_t *sem)
 
 	if(sem && (sem->flag & IPC_FLAG_VALID))
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 
 #ifdef INCLUDE_JOURNAL
-		journal_sem_destroy(sem);
+		journal_ipc_destroy((ipc_t *)sem);
 #endif
 						
 #ifdef INCLUDE_PMCOUNTER
@@ -98,7 +98,7 @@ void sem_destroy(sem_t *sem)
 			task_wakeup_noschedule(TASK_T(t));
 		}
 		task_schedule();
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 	}
 }
 
@@ -117,9 +117,9 @@ int sem_pend(sem_t *s, int timeout)
 
 	if(s && (s->flag & IPC_FLAG_VALID))
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 #ifdef INCLUDE_JOURNAL
-		journal_sem_pend(s, timeout);
+		journal_ipc_pend((ipc_t *)s, timeout);
 #endif
 		s->value--;
 		if(s->value < 0)
@@ -128,7 +128,7 @@ int sem_pend(sem_t *s, int timeout)
 			{
 				r = RAGAIN;
 				s->value ++;
-				bsp_frestore(f);
+				SYS_FRESTORE(f);
 			}
 			else
 			{
@@ -142,9 +142,9 @@ int sem_pend(sem_t *s, int timeout)
 					current->flags |= TASK_FLAGS_DELAYING;
 				}
 				task_block(&(s->taskq));
-				bsp_frestore(f);  // must restore flag here to let task switch occure
+				SYS_FRESTORE(f);  // must restore flag here to let task switch occure
 
-				f = bsp_fsave();
+				SYS_FSAVE(f);
 				switch ((r = current->wakeup_cause))
 				{
 				case ROK:
@@ -157,13 +157,13 @@ int sem_pend(sem_t *s, int timeout)
 					s->value++;
 					break;
 				}
-				bsp_frestore(f);
+				SYS_FRESTORE(f);
 			}
 		}
 		else
 		{
 			r = ROK;
-			bsp_frestore(f);
+			SYS_FRESTORE(f);
 		}
 	}
 	
@@ -184,7 +184,7 @@ int sem_post(sem_t *s)
 	if(s && (s->flag & IPC_FLAG_VALID))
 	{
 		r = ROK;
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 		s->value++;
 		if(s->value <= 0)
 		{
@@ -193,7 +193,7 @@ int sem_post(sem_t *s)
 		}
 
 #ifdef INCLUDE_JOURNAL
-		journal_sem_post(s, t);
+		journal_ipc_post((ipc_t *)s, t);
 #endif // INCLUDE_JOURNAL
 
 		if(t)
@@ -202,7 +202,7 @@ int sem_post(sem_t *s)
 			task_wakeup(TASK_T(t));
 		}
 		
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 	}
 	return r;
 }

@@ -124,7 +124,7 @@ void *s_cache_alloc(s_cache_t s)
 	S_OBJ *obj = NULL;
 	uint32_t f;
 
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	if(s>=0 && s<MAX_S_CACHE_NUMBER)
 	{
 		S_CACHE *sc = &s_cache_array[s];
@@ -135,7 +135,7 @@ void *s_cache_alloc(s_cache_t s)
 			sc->free_objs --;
 		}
 	}
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 	return (void *)obj;
 }
 
@@ -149,7 +149,7 @@ void s_cache_free(s_cache_t s, void *pobj)
 {
 	uint32_t f;
 
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	if(s>=0 && s<MAX_S_CACHE_NUMBER && pobj)
 	{
 		S_CACHE *sc = &s_cache_array[s];
@@ -161,7 +161,7 @@ void s_cache_free(s_cache_t s, void *pobj)
 		SINGLE_LIST_INSERT(&(sc->free_obj_list), obj);
 		sc->free_objs ++;
 	}
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 }
 
 

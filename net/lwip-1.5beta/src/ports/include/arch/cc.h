@@ -58,8 +58,8 @@ typedef unsigned long	mem_ptr_t;
 #define LWIP_PLATFORM_ASSERT(x) {assert(x);}
 
 #define SYS_ARCH_DECL_PROTECT(x) uint32_t (x);
-#define SYS_ARCH_PROTECT(x)      x = bsp_fsave();
-#define SYS_ARCH_UNPROTECT(x)    bsp_frestore(x);
+#define SYS_ARCH_PROTECT(x)      SYS_FSAVE(x)
+#define SYS_ARCH_UNPROTECT(x)    SYS_FRESTORE(x)
 
 #define LWIP_CHKSUM_ALGORITHM 2
 

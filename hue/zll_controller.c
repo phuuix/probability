@@ -327,7 +327,10 @@ uint8_t zllctrl_process_touchlink_indication(epInfo_t *epInfo)
 
   uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "touchlink ind: NetworkAddr=0x%04x EndPoint=0x%02x ProfileID=0x%04x DeviceID=0x%04x Version=0x%02x Status=0x%02x\n",
     epInfo->nwkAddr, epInfo->endpoint, epInfo->profileID, epInfo->deviceID, epInfo->version, epInfo->status);
-     
+  uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "    IEEE Addr: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:\n", 
+     epInfo->IEEEAddr[0], epInfo->IEEEAddr[1], epInfo->IEEEAddr[2], epInfo->IEEEAddr[3], 
+     epInfo->IEEEAddr[4], epInfo->IEEEAddr[5], epInfo->IEEEAddr[6], epInfo->IEEEAddr[7]);
+  
   //control this device by default
   savedNwkAddr =  epInfo->nwkAddr; 
   savedEp = epInfo->endpoint;
@@ -335,7 +338,7 @@ uint8_t zllctrl_process_touchlink_indication(epInfo_t *epInfo)
   if(epInfo->profileID == ZLL_PROFILE_ID)
   {
     /* add the new device to light list... */
-    light = zllctrl_find_light_by_shortaddr(epInfo->nwkAddr, epInfo->endpoint);
+    light = zllctrl_find_light_by_ieeeaddr(epInfo->IEEEAddr);
     if(light == NULL)
     {
       light = zllctrl_create_light(epInfo);
@@ -358,18 +361,18 @@ uint8_t zllctrl_process_newdev_indication(epInfo_t *epInfo)
 
   uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "newDevIndicationCb: NetworkAddr=0x%04x EndPoint=0x%02x ProfileID=0x%04x DeviceID=0x%04x Version=0x%02x Status=0x%02x\n",
 		epInfo->nwkAddr, epInfo->endpoint, epInfo->profileID, epInfo->deviceID, epInfo->version, epInfo->status);
-  uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "    IEEE Addr: 0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:\n", 
+  uprintf(UPRINT_INFO, UPRINT_BLK_HUE, "    IEEE Addr: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:\n", 
      epInfo->IEEEAddr[0], epInfo->IEEEAddr[1], epInfo->IEEEAddr[2], epInfo->IEEEAddr[3], 
      epInfo->IEEEAddr[4], epInfo->IEEEAddr[5], epInfo->IEEEAddr[6], epInfo->IEEEAddr[7]);      
      
-  //control this device by default
-  savedNwkAddr =  epInfo->nwkAddr; 
-  savedEp = epInfo->endpoint;
-   
   if(epInfo->profileID == ZLL_PROFILE_ID)
   {
+    //control this device by default
+    savedNwkAddr =  epInfo->nwkAddr; 
+    savedEp = epInfo->endpoint;
+	
     /* add the new device to light list... */
-    light = zllctrl_find_light_by_shortaddr(epInfo->nwkAddr, epInfo->endpoint);
+    light = zllctrl_find_light_by_ieeeaddr(epInfo->IEEEAddr);
     if(light == NULL)
     {
       light = zllctrl_create_light(epInfo);
@@ -386,7 +389,7 @@ uint8_t zllctrl_process_newdev_indication(epInfo_t *epInfo)
   return 0;
 }
 
-#define CC2530_PROGRAMMING_INTERVAL 100 // prevent programming cc2530 too fast, in us
+#define CC2530_PROGRAMMING_INTERVAL 1 // prevent programming cc2530 too fast, in us
 uint32_t zllctrl_process_json_set_light(hue_t *hue, hue_mail_t *huemail)
 {
     uint32_t ret = 0;
@@ -728,7 +731,13 @@ hue_light_t *zllctrl_create_light(epInfo_t *epInfo)
 {
     hue_light_t *light = NULL;
 
-    if(gNumHueLight < HUE_MAX_LIGHTS)
+	if(gNumHueLight == 1 && gHueLight[0].ep_info.nwkAddr == 0xDEAD)
+	{
+		/* replace the first dummy light */
+		light = &gHueLight[0];
+		light->ep_info = *epInfo;
+	}
+    else if(gNumHueLight < HUE_MAX_LIGHTS)
     {
         light = &gHueLight[gNumHueLight];
         light->ep_info = *epInfo;

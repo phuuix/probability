@@ -466,8 +466,7 @@ void hue_data_init(hue_t *hue)
     /* create one lights for debug */
     gNumHueLight = 1;
     gHueLight[0].reachable = 1;
-	siprintf((char *)gHueLight[0].name, 32, "DummyLamp");
-	gHueLight[0].ep_info.nwkAddr = 0xEE;
+	gHueLight[0].ep_info.nwkAddr = 0xDEAD;
 
     /* create one user (in whitelist) for debug */
     gNumHueUser = 1;

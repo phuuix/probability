@@ -14,7 +14,7 @@
  *
  * @History
  *   AUTHOR         DATE                 NOTES
- *   puhuix           2006-8-31             modify API forms according to process adaption
+ *   puhuix           2006-8-31          modify API forms according to process adaption
  *                                                    use IPC api
  */
 
@@ -42,7 +42,7 @@ int mtx_initialize(mtx_t *mtx)
 	{
 		uint32_t f;
 
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 
 		mtx->t_parent = TASK_T(current);
 		mtx->value = 1;
@@ -52,14 +52,14 @@ int mtx_initialize(mtx_t *mtx)
 		mtx->flag = IPC_FLAG_VALID;
 
 #ifdef INCLUDE_JOURNAL
-		journal_mtx_init(mtx);
+		journal_ipc_init((ipc_t *)mtx);
 #endif
 		
 #ifdef INCLUDE_PMCOUNTER
 		PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nMutex], 1);
 #endif
 
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 		
 		return ROK;
 	}
@@ -79,10 +79,10 @@ void mtx_destroy(mtx_t *mtx)
 
 	if(mtx && (mtx->flag & IPC_FLAG_VALID))
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 
 #ifdef INCLUDE_JOURNAL
-		journal_mtx_destroy(mtx);
+		journal_ipc_destroy((ipc_t *)mtx);
 #endif
 				
 #ifdef INCLUDE_PMCOUNTER
@@ -97,7 +97,7 @@ void mtx_destroy(mtx_t *mtx)
 			task_wakeup_noschedule(TASK_T(t));
 		}
 		task_schedule();
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 	}
 }
 
@@ -116,12 +116,16 @@ int mtx_pend(mtx_t *m, time_t timeout)
 
 	if(m && (m->flag & IPC_FLAG_VALID))
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
+#ifdef INCLUDE_JOURNAL
+		journal_ipc_pend((ipc_t *)m, timeout);
+#endif
+
 		if(m->owner == current)	/* recursive holding */
 		{
 			m->holdtimes ++;
 			r = ROK;
-			bsp_frestore(f);
+			SYS_FRESTORE(f);
 			return r;
 		}
 
@@ -132,7 +136,7 @@ int mtx_pend(mtx_t *m, time_t timeout)
 			{
 				r = RAGAIN;
 				m->value++;
-				bsp_frestore(f);
+				SYS_FRESTORE(f);
 			}
 			else
 			{
@@ -149,10 +153,10 @@ int mtx_pend(mtx_t *m, time_t timeout)
 					current->flags |= TASK_FLAGS_DELAYING;
 				}
 				task_block(&(m->taskq));
-				bsp_frestore(f);
+				SYS_FRESTORE(f);
 
 				r = RERROR;
-				f = bsp_fsave();
+				SYS_FSAVE(f);
 				switch ((r = current->wakeup_cause))
 				{
 				case ROK:
@@ -172,7 +176,7 @@ int mtx_pend(mtx_t *m, time_t timeout)
 					/* No need for it, this work is done in post operation */
 					break;
 				}
-				bsp_frestore(f);
+				SYS_FRESTORE(f);
 			}
 		}
 		else
@@ -182,7 +186,7 @@ int mtx_pend(mtx_t *m, time_t timeout)
 			m->holdtimes ++;
 			m->owner = current;
 			r = ROK;
-			bsp_frestore(f);
+			SYS_FRESTORE(f);
 		}
 	}
 
@@ -198,17 +202,17 @@ int mtx_post(mtx_t *m)
 {
 	uint32_t f;
 	int r = RERROR;
-	struct dtask *t;
+	struct dtask *t = NULL;
 	
 	if(m && (m->flag & IPC_FLAG_VALID))
 	{
 		r = ROK;
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 		
-		/* only mutex's owner can post */
+		/* only mutex's owner can post; post is only allowed after pend */
 		if(m->owner != current)
 		{
-			bsp_frestore(f);
+			SYS_FRESTORE(f);
 			return RERROR;
 		}
 		
@@ -241,8 +245,12 @@ int mtx_post(mtx_t *m)
 			/* TODO: update current task's priority? */
 			/* no, assume the hold time is relative short */
 		}
-		
-		bsp_frestore(f);
+
+#ifdef INCLUDE_JOURNAL
+		journal_ipc_post((ipc_t *)m, t);
+#endif // INCLUDE_JOURNAL
+
+		SYS_FRESTORE(f);
 	}
 	
 	return r;

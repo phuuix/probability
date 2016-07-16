@@ -26,12 +26,96 @@
 #define MEMHIGH 0x20020000
 
 extern uint32_t sys_passed_ticks;
+extern uint32_t sys_intdisable_nested;
+
+#include "config.h"
+#include "journal.h"
+
+#ifdef INCLUDE_JOURNAL
+
+/* disable interrupt and save cpu flags */
+#define SYS_FSAVE(f) \
+	do { \
+		f = bsp_fsave(); \
+		if(0 == sys_intdisable_nested) {\
+			journal_interrupt(JOURNAL_TYPE_IRQDISABLE, 0); \
+		} \
+		sys_intdisable_nested ++; \
+	} while(0)
+
+/* restore cpu flags: 
+ * TODO: if sysintdisable_nested < 0, a warning should be generated.
+ */
+#define SYS_FRESTORE(f) \
+	do { \
+		sys_intdisable_nested --; \
+		if(0 == sys_intdisable_nested) {\
+			journal_interrupt(JOURNAL_TYPE_IRQENABLE, 0); \
+		} \
+		bsp_frestore(f); \
+	} while(0)
+
+/* Using SYS_INT_DISABLE() and SYS_INT_ENABLE() is not encouraged */
+#define SYS_INT_DISABLE() \
+	do { \
+		if (0 == sys_intdisable_nested) {\
+			sys_intdisable_nested ++; \
+			journal_interrupt(JOURNAL_TYPE_INTERRUPT, sys_intdisable_nested); \
+			bsp_int_disable(); \
+		} \
+	} while(0)
+
+/* enable interrupt directly
+ * TODO: if sysintdisable_nested > 1, a warning should be generated.
+ */
+#define SYS_INT_ENABLE() \
+	do { \
+		if ( sys_intdisable_nested > 0) {\
+			sys_intdisable_nested --; \
+			journal_interrupt(JOURNAL_INT_ENABLE, sys_intdisable_nested); \
+			bsp_int_enable(); \
+		} \
+	} while(0)
+
+#else // INCLUDE_JOURNAL
+
+#define SYS_FSAVE(f) \
+	do { \
+		f = bsp_fsave(); \
+		sys_intdisable_nested ++; \
+	} while(0)
+
+#define SYS_FRESTORE(f) \
+	do { \
+		sys_intdisable_nested --; \
+		f = bsp_frestore(); \
+	} while(0)
+
+#define SYS_INT_DISABLE() \
+	do { \
+		if (0 == sys_intdisable_nested) {\
+			sys_intdisable_nested ++; \
+			bsp_int_disable(); \
+		} \
+	} while(0)
+
+#define SYS_INT_ENABLE() \
+	do { \
+		if ( sys_intdisable_nested > 0) {\
+			sys_intdisable_nested --; \
+			bsp_int_enable(); \
+		} \
+	} while(0)
+
+#endif
+
 #define KPRINTF(format, ...) \
 do{ \
-	uint32_t f = bsp_fsave(); \
+	uint32_t f; \
+	SYS_FSAVE(f); \
 	kprintf("%10d: ", sys_passed_ticks); \
 	kprintf(format, ##__VA_ARGS__); \
-	bsp_frestore(f); \
+	SYS_FRESTORE(f); \
 }while(0)
 
 

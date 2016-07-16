@@ -47,27 +47,38 @@ void dump_buffer(uint8_t *buffer, uint16_t length)
 /* one solution for udelay */
 extern uint32_t sys_passed_ticks;
 static uint32_t loops_per_us = 0;
-void udelay(uint32_t us)
+void bsp_udelay(uint32_t us)
 {
 	uint32_t loops;
 
 	for(loops=0; loops<us*(loops_per_us+1); loops++);
 }
 
-uint32_t udelay_init()
+/* get loops per us value. 
+ * It should be called after bsp_gettime_init() is called.
+ */
+uint32_t bsp_udelay_init()
 {
-	uint32_t tick = sys_passed_ticks;
-	uint32_t weight = 0;
+	uint32_t flags, n;
+	uint32_t tv_usec_old, tv_usec_new;
 
-	while(tick == sys_passed_ticks);
+	SYS_FSAVE(flags);
 
-	/* loop for 30 ticks */
-	while(sys_passed_ticks <= tick+30)
-		weight ++;
+	tv_usec_old = __HAL_TIM_GET_COUNTER(&TimHandle);
 
-	loops_per_us = weight/(30*(1000000/TICKS_PER_SECOND))+1;
+#define N_LOOPS_UDELAY (1000000)
+#define N_MILLION (1000000)
+	for(n=0; n<N_LOOPS_UDELAY; n++);
+	
+	tv_usec_new = __HAL_TIM_GET_COUNTER(&TimHandle);
+
+	if(tv_usec_new > tv_usec_old)
+		loops_per_us = N_LOOPS_UDELAY/(tv_usec_new - tv_usec_old);
+	else
+		loops_per_us = N_LOOPS_UDELAY/(tv_usec_new + N_MILLION - tv_usec_old);
+	SYS_FRESTORE(flags);
+	
 	return loops_per_us;
-	//kprintf("  udelay: loops per us is %d.\n", loops_per_us);
 }
 
 /* time counter init: for high solution time (bsp_gettime)
@@ -77,6 +88,7 @@ void bsp_gettime_init()
 {
 	
 	uint16_t PrescalerValue;
+	uint32_t sys_clock;
 	
 	#define TIMFREQ (1000000000/1000)
 	
@@ -86,7 +98,8 @@ void bsp_gettime_init()
 	__HAL_RCC_TIM2_CLK_ENABLE();
 
 	/* Compute the prescaler value */
-	PrescalerValue = (uint16_t) ((SystemCoreClock/2) / TIMFREQ) - 1;
+	sys_clock = HAL_RCC_GetHCLKFreq();
+	PrescalerValue = (uint16_t) ((sys_clock/2) / TIMFREQ) - 1;
 	
 	/* Initialize TIM2 */
 	TimHandle.Instance = TIM2;
@@ -101,12 +114,11 @@ void bsp_gettime_init()
 	__HAL_TIM_ENABLE(&TimHandle);
 }
 
+/* brief: return realtime; now the precision is us NOT ns */
 void bsp_gettime(uint32_t *tv_sec, uint32_t *tv_nsec)
 {
 	*tv_sec = time(NULL);
-	/* TIM_GetCounter() return us */
-	//*tv_nsec = TIM_GetCounter(TIM2)*1000;
-	*tv_nsec = __HAL_TIM_GET_COUNTER(&TimHandle) * 1000;
+	*tv_nsec = __HAL_TIM_GET_COUNTER(&TimHandle);
 }
 
 
@@ -315,7 +327,7 @@ void isr_default_handler()
 	ISR_FUNC  isr;
 	uint32_t f;
 
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	int_id = get_psr();
 
 	sys_interrupt_enter(int_id);
@@ -333,7 +345,7 @@ void isr_default_handler()
 	}
 
 	sys_interrupt_exit(int_id);
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 }
 
 
@@ -370,13 +382,14 @@ void dump_call_stack(uint32_t fp, uint32_t low, uint32_t high)
 void panic(char *infostr)
 {
 	uint32_t sp, fp, psr;
-	uint32_t size, i;
-	bsp_fsave();
+	uint32_t size, i, f;
+	
+	SYS_FSAVE(f);
 	
     psr = get_psr();
     fp = get_fp();
 
-	kprintf("PANIC psr=0x%08x fp=0x%08x: %s\n", psr, fp, infostr);
+	kprintf("PANIC psr=0x%08x fp=0x%08x flag=0x%08x: %s\n", psr, fp, f, infostr);
 
 	if(get_psr() & 0xFF){
 		/* in exception context, dump exception stack */
@@ -436,13 +449,14 @@ void panic(char *infostr)
     while(1);
 }
 
+/* return tick in ms according to STM32 definition */
 uint32_t HAL_GetTick(void)
 {
 	uint32_t tv_sec, tv_nsec;
 	
 	bsp_gettime(&tv_sec, &tv_nsec);
 	
-	return tv_sec*1000+tv_nsec/1000000;
+	return tv_sec*1000+tv_nsec/1000;
 }
 
 /* We don't use ST's lib to initialize systick (Systick_Config/HAL_InitTick) which generate 1ms interrupt.

@@ -54,7 +54,7 @@ int msgq_initialize(msgq_t *q, uint16_t bufsize, void *buf)
 	if(buf == NULL)
 		return RERROR;
 
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	q->t_parent = TASK_T(current);
 	q->type = IPC_TYPE_MSGQ;
 	q->flag = IPC_FLAG_VALID;
@@ -62,14 +62,14 @@ int msgq_initialize(msgq_t *q, uint16_t bufsize, void *buf)
 	mem_buffer_init(&q->buf, buf, bufsize);
 
 #ifdef INCLUDE_JOURNAL
-	journal_msgq_init(q, bufsize);
+	journal_ipc_init((ipc_t *)q);
 #endif
 			
 #ifdef INCLUDE_PMCOUNTER
 	PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nMessageQ], 1);
 #endif
 
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 	
 	return ROK;
 }
@@ -86,10 +86,10 @@ void msgq_destroy(msgq_t *q)
 
 	if(q && (q->flag & IPC_FLAG_VALID))
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 
 #ifdef INCLUDE_JOURNAL
-		journal_msgq_destroy(q);
+		journal_ipc_destroy((ipc_t *)q);
 #endif
 				
 #ifdef INCLUDE_PMCOUNTER
@@ -104,7 +104,7 @@ void msgq_destroy(msgq_t *q)
 			task_wakeup_noschedule(TASK_T(t));
 		}
 		task_schedule();
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 	}
 }
 
@@ -124,11 +124,15 @@ int msgq_post(msgq_t *msgq, char *msg, size_t msglen)
 
 	if(msgq && (msgq->flag & IPC_FLAG_VALID))
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 		if(mem_buffer_put(&msgq->buf, msg, msglen))
 		{
 			ret = ROK;
 			t = blockq_select(&(msgq->taskq));
+
+#ifdef INCLUDE_JOURNAL
+			journal_ipc_post((ipc_t *)msgq, t);
+#endif // INCLUDE_JOURNAL
 
 			if(t)
 			{
@@ -136,7 +140,7 @@ int msgq_post(msgq_t *msgq, char *msg, size_t msglen)
 				task_wakeup(TASK_T(t));
 			}
 		}
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 	}
 
 	return ret;
@@ -159,9 +163,12 @@ int msgq_pend(msgq_t *msgq, char *msg, size_t *msglen, int timeout)
 
 	if(msgq && (msgq->flag & IPC_FLAG_VALID))
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
+#ifdef INCLUDE_JOURNAL
+		journal_ipc_pend((ipc_t *)msgq, timeout);
+#endif
 		len = mem_buffer_get(&msgq->buf, msg, *msglen);
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 
 		if(len == 0)
 		{
@@ -171,7 +178,7 @@ int msgq_pend(msgq_t *msgq, char *msg, size_t *msglen, int timeout)
 			}
 			else
 			{
-				f = bsp_fsave();
+				SYS_FSAVE(f);
 				current->wakeup_cause = RERROR;
 				if(timeout > 0)
 				{
@@ -181,10 +188,10 @@ int msgq_pend(msgq_t *msgq, char *msg, size_t *msglen, int timeout)
 					current->flags |= TASK_FLAGS_DELAYING;
 				}
 				task_block(&(msgq->taskq));
-				bsp_frestore(f);
+				SYS_FRESTORE(f);   // give an opertunity for re-scheduling
 
 				ret = RERROR;
-				f = bsp_fsave();
+				SYS_FSAVE(f);
 				switch ((ret = current->wakeup_cause))
 				{
 				case ROK:
@@ -198,7 +205,7 @@ int msgq_pend(msgq_t *msgq, char *msg, size_t *msglen, int timeout)
 				default:
 					break;
 				}
-				bsp_frestore(f);
+				SYS_FRESTORE(f);
 			}
 		}
 		else

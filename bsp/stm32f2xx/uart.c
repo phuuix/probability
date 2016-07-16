@@ -125,10 +125,10 @@ uint16_t uart_getc(uint8_t COM)
 
 	if(COM < COMn)
 	{
-		flags = bsp_fsave();
+		SYS_FSAVE(flags);
 		while(__HAL_UART_GET_FLAG(huart, UART_FLAG_RXNE) == RESET);
 		c = (uint8_t)(huart->Instance->DR & (uint8_t)0x00FF);
-		bsp_frestore(flags);
+		SYS_FRESTORE(flags);
 	}
 	
 
@@ -137,34 +137,40 @@ uint16_t uart_getc(uint8_t COM)
 
 void uart_putc(uint8_t COM, uint8_t c)
 {
-	int uart_status;
-	uint32_t flags;
+//	uint32_t flags;
+
+	UART_HandleTypeDef *huart = &UartHandle[COM];
 	
 	if(COM < COMn)
 	{
-		flags = bsp_fsave();
-		uart_status = HAL_UART_Transmit(&UartHandle[COM], &c, 1, HAL_MAX_DELAY);
-		assert(uart_status == HAL_OK);
-		bsp_frestore(flags);
+//		flags = bsp_fsave();
+		while(!__HAL_UART_GET_FLAG(huart, USART_FLAG_TXE))
+			;
+
+	    huart->Instance->DR = c;
+//		bsp_frestore(flags);
 	}
 }
 
 
 void uart_putc_ex(uint8_t COM, uint8_t c)
 {
-	uint32_t flags;
+//	uint32_t flags;
+	UART_HandleTypeDef *huart = &UartHandle[COM];
 	
 	if(COM < COMn)
 	{
-		uint8_t c_return = '\r';
+//		flags = bsp_fsave();
+		while(!__HAL_UART_GET_FLAG(huart, USART_FLAG_TXE))
+			;
 
-		flags = bsp_fsave();
 		/* \n ==> \r\n */
 		if(c == '\n'){
-			HAL_UART_Transmit(&UartHandle[COM], &c_return, 1, HAL_MAX_DELAY);
+			huart->Instance->DR = '\r';
+			while(!__HAL_UART_GET_FLAG(huart, USART_FLAG_TXE))	;
 		}
-	    HAL_UART_Transmit(&UartHandle[COM], &c, 1, HAL_MAX_DELAY);
-		bsp_frestore(flags);
+	    huart->Instance->DR = c;
+//		bsp_frestore(flags);
 	}
 }
 

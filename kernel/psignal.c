@@ -59,7 +59,7 @@ int sig_task(task_t task, int __sig)
 	ptask->sigctrl.t_cursig |= sigmask[__sig-1];
 	if(ptask->sigctrl.t_cursig & ~(ptask->sigctrl.t_hold))
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 		if(ptask->state == TASK_STATE_BLOCK)
 		{
 			systask[task].errcode = RSIGNAL;
@@ -70,7 +70,7 @@ int sig_task(task_t task, int __sig)
 			systask[task].errcode = RSIGNAL;
 			task_resume(task);
 		}
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 	}
 
 	return 0;
@@ -99,9 +99,9 @@ int sig_pending()
 	uint32_t f;
 	struct dtask *task;
 	
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	task = current;
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 
 	if(task->sigctrl.t_cursig & ~task->sigctrl.t_hold)
 	{
@@ -132,9 +132,9 @@ int sigprocmask (int __how, const sigset_t *__set, sigset_t *__oset)
 	struct dtask *task;
 	sigset_t new_set, old_set;
 	
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	task = current;
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
     
     old_set = task->sigctrl.t_hold;
 	
@@ -174,9 +174,9 @@ int sigsuspend (const sigset_t *__set)
 	struct dtask *task;
 	sigset_t old_set;
 	
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	task = current;
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 
     old_set = task->sigctrl.t_hold;
 
@@ -195,9 +195,9 @@ int sigaction (int __sig, const struct sigaction *__act, struct sigaction *__oac
 	uint32_t f;
 	struct dtask *task;
 	
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	task = current;
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
     
     if ( __sig < 1 || __sig > _NSIG ) {
 		return( -1 );
@@ -226,9 +226,9 @@ int sigpending (sigset_t *__set)
 	uint32_t f;
 	struct dtask *task;
 	
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	task = current;
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 
 	*__set = task->sigctrl.t_cursig & task->sigctrl.t_hold;
 	

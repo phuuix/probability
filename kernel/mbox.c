@@ -66,17 +66,17 @@ int mbox_initialize(mbox_t *mbox, uint16_t usize, uint16_t unum, void *data)
 	blockq_init(&mbox->taskq);
 	queue_buffer_init(&mbox->buf, data, usize, unum);
 	
-	f = bsp_fsave();
+	SYS_FSAVE(f);
 	mbox->flag |= IPC_FLAG_VALID;
 	
 #ifdef INCLUDE_JOURNAL
-	journal_mbox_init(mbox, usize, unum);
+	journal_ipc_init((ipc_t *)mbox);
 #endif
 
 #ifdef INCLUDE_PMCOUNTER
 	PMC_PEG_COUNTER(PMC_sys32_counter[PMC_U32_nMbox], 1);
 #endif
-	bsp_frestore(f);
+	SYS_FRESTORE(f);
 
 	return ROK;
 }
@@ -93,13 +93,13 @@ void mbox_destroy(mbox_t *mbox)
 
 	if(mbox && (mbox->flag & IPC_FLAG_VALID))
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 
 		if(mbox->flag & IPC_FLAG_FREEMEM)
 			free(mbox->buf.data);
 		
 #ifdef INCLUDE_JOURNAL
-		journal_mbox_destroy(mbox);
+		journal_ipc_destroy((ipc_t *)mbox);
 #endif
 		
 #ifdef INCLUDE_PMCOUNTER
@@ -116,7 +116,7 @@ void mbox_destroy(mbox_t *mbox)
 		task_schedule();
 
 		/* left mbox->buf.data to be freed by user */
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 	}
 }
 
@@ -135,7 +135,7 @@ int mbox_post(mbox_t *mbox, uint32_t *msg)
 
 	if(mbox && (mbox->flag & IPC_FLAG_VALID))
 	{
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 		if(queue_buffer_put(&mbox->buf, msg))
 		{
 			ret = ROK;
@@ -143,7 +143,7 @@ int mbox_post(mbox_t *mbox, uint32_t *msg)
 			if(t)
 			{
 #ifdef INCLUDE_JOURNAL
-				journal_mbox_post(mbox, t);
+				journal_ipc_post((ipc_t *)mbox, t);
 #endif // INCLUDE_JOURNAL
 				t->wakeup_cause = ROK;
 				task_wakeup(t-systask);
@@ -151,11 +151,11 @@ int mbox_post(mbox_t *mbox, uint32_t *msg)
 			else
 			{
 #ifdef INCLUDE_JOURNAL
-				journal_mbox_post(mbox, t);
+				journal_ipc_post((ipc_t *)mbox, t);
 #endif // INCLUDE_JOURNAL
 			}
 		}
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 	}
 
 	return ret;
@@ -179,16 +179,16 @@ int mbox_pend(mbox_t *mbox, uint32_t *msg, int timeout)
 	if(mbox && (mbox->flag & IPC_FLAG_VALID))
 	{
 		ret = ROK;
-		f = bsp_fsave();
+		SYS_FSAVE(f);
 		len = queue_buffer_get(&mbox->buf, msg);
-		bsp_frestore(f);
+		SYS_FRESTORE(f);
 		if(len == 0)
 		{
 			if(timeout == 0)
 				ret = RAGAIN;
 			else
 			{
-				f = bsp_fsave();
+				SYS_FSAVE(f);
 				myself = current;
 				current->wakeup_cause = RERROR;
 				if(timeout > 0)
@@ -200,18 +200,18 @@ int mbox_pend(mbox_t *mbox, uint32_t *msg, int timeout)
 				}
 
 #ifdef INCLUDE_JOURNAL
-				journal_mbox_pend(mbox, timeout);
+				journal_ipc_pend((ipc_t *)mbox, timeout);
 #endif // INCLUDE_JOURNAL
 				task_block(&(mbox->taskq));
-				bsp_frestore(f);
+				SYS_FRESTORE(f);
 
 				/* at this point, wakeup cause is modified */
 				switch ((ret = myself->wakeup_cause))
 				{
 				case ROK:
-					f = bsp_fsave();
+					SYS_FSAVE(f);
 					len = queue_buffer_get(&mbox->buf, msg);
-					bsp_frestore(f);
+					SYS_FRESTORE(f);
 					if(len <= 0)
 						ret = RERROR;	/* double check for length */
 					break;

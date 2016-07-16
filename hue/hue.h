@@ -1,4 +1,29 @@
-/* hue.h */
+/* hue.h
+ * 
+ * Some Zigbee notes
+ * Profile, for example,
+ *  0x0104 Home Autotmation (HA)
+ *  0x0108 Personal Home & Hospital Care (PHHC)
+ *  0xC05E Zigbee Light Link
+ *  A special profile, ZDP (Zigbee Device Profile), is used for ZDO (Zigbee Device Object) management, 
+ *  including address req, desc req, join/leave network, bind req, etc
+ *
+ * Device, Each profile defines its owner avaliable device list and the device ID can be found in profile spec. For example,
+ *  The following device IDs are defined in HA:
+ *   0x0000 On/Off Switch
+ *   0x0100 On/Off Light
+ *   0x0101 Dimmable Light
+ *   0x0102 Color Dimmable Light
+ *  and the following device IDs are defined in ZLL:
+ *   0x0000 On/Off light
+ *   0x0100 Dimmable light
+ *   0x0200 Color light
+ *
+ * Cluster, including cluster commands and attribues, each command and attribute has an ID which is used in zigbee messages.
+ * 
+ * Endpoint,
+ * 
+ */
 
 #ifndef _HUE_H_
 #define _HUE_H_
@@ -121,8 +146,8 @@ This parameter is only present when the light supports at least one of the value
 	uint8_t sat;			//Saturation of the light. 255 is the most saturated (colored) and 0 is the least saturated (white).
 	uint16_t hue;			//Hue of the light. This is a wrapping value between 0 and 65535. Both 0 and 65535 are red, 25500 is green and 46920 is blue.
 	uint16_t ct;			//The Mired Color temperature?of the light. 2012 connected lights are capable of 153 (6500K) to 500 (2000K)
-	uint16_t x;				//Q0.15, The x and y coordinates of a color in CIE color space.
-	uint16_t y;				//Q0.15
+	uint16_t x;				//Q0.16, The x and y coordinates of a color in CIE XY color space.
+	uint16_t y;				//Q0.16
     uint16_t transitiontime;//in 100ms
 
 	uint8_t type;			//A fixed name describing the type of light e.g. "Extended color light"
@@ -253,7 +278,7 @@ typedef union hue_mail_s
 }hue_mail_t;
 
 #define HUE_MAX_USERS 8
-#define HUE_MAX_LIGHTS 32
+#define HUE_MAX_LIGHTS 16
 
 extern hue_light_t gHueLight[HUE_MAX_LIGHTS];
 extern hue_user_t gHueUser[HUE_MAX_USERS];
